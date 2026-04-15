@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitstreak-v1';
+const CACHE_NAME = 'fitstreak-v4';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -30,7 +30,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: 'offline' }), { headers: { 'Content-Type': 'application/json' } })));
     return;
   }
-  // Cache first for static assets
+  // Cache first for fonts
   if (event.request.url.includes('fonts.googleapis.com') || event.request.url.includes('fonts.gstatic.com')) {
     event.respondWith(
       caches.match(event.request).then(cached => cached || fetch(event.request).then(resp => {
@@ -41,17 +41,14 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
-  // Cache first with network fallback for app shell
+  // Network first for app shell (index.html, sw.js, manifest) — ensures updates are always picked up
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(resp => {
-        if (resp.status === 200) {
-          const clone = resp.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-        }
-        return resp;
-      }).catch(() => caches.match('./index.html'));
-    })
+    fetch(event.request).then(resp => {
+      if (resp.status === 200) {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+      }
+      return resp;
+    }).catch(() => caches.match(event.request))
   );
 });

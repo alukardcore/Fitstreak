@@ -1651,12 +1651,12 @@ canvas { display: block; }
     <div class="modal-body">
       <input class="modal-input" id="meal-name-input" type="text" placeholder="Meal name (e.g. Chicken & Rice)" maxlength="60" autocomplete="off">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <input class="modal-input" id="meal-cal" type="number" placeholder="Calories" min="0" max="5000" style="margin:0">
-        <input class="modal-input" id="meal-protein" type="number" placeholder="Protein (g)" min="0" max="500" style="margin:0">
+        <input class="modal-input" id="meal-cal" type="number" placeholder="Calories" min="0" style="margin:0">
+        <input class="modal-input" id="meal-protein" type="number" placeholder="Protein (g)" min="0" style="margin:0">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-        <input class="modal-input" id="meal-carbs" type="number" placeholder="Carbs (g)" min="0" max="1000" style="margin:0">
-        <input class="modal-input" id="meal-fat" type="number" placeholder="Fat (g)" min="0" max="500" style="margin:0">
+        <input class="modal-input" id="meal-carbs" type="number" placeholder="Carbs (g)" min="0" style="margin:0">
+        <input class="modal-input" id="meal-fat" type="number" placeholder="Fat (g)" min="0" style="margin:0">
       </div>
       <button class="btn-primary" onclick="logMeal()">Log Meal</button>
     </div>
@@ -2982,7 +2982,7 @@ function openAddMeal() { openModal('meal-modal'); }
 function logMeal() {
   const name = sanitizeString(document.getElementById('meal-name-input').value, 60);
   if (!name) { showToast('Enter a meal name', 'error'); return; }
-  const cal = sanitizeNumber(document.getElementById('meal-cal').value, 0, 5000);
+  const cal = sanitizeNumber(document.getElementById('meal-cal').value, 0, 10000);
   const p = sanitizeNumber(document.getElementById('meal-protein').value, 0, 500);
   const c = sanitizeNumber(document.getElementById('meal-carbs').value, 0, 1000);
   const f = sanitizeNumber(document.getElementById('meal-fat').value, 0, 500);
