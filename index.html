@@ -2886,7 +2886,7 @@ function renderNutrition() {
     </svg>
     <div class="macro-ring-center">
       <div class="macro-ring-cal">${totals.calories}</div>
-      <div class="macro-ring-lbl">kcal</div>
+      <div class="macro-ring-lbl">of ${goals.calories} kcal</div>
     </div>`;
 
   const barsWrap = document.createElement('div');
@@ -2903,7 +2903,7 @@ function renderNutrition() {
     row.innerHTML = `
       <div class="macro-bar-info">
         <span class="macro-bar-name">${m.name}</span>
-        <span class="macro-bar-val">${Math.round(m.val)}/${m.goal}${m.unit}</span>
+        <span class="macro-bar-val">${Math.round(m.val)}${m.unit} <span style="color:var(--text-dim)">/ ${m.goal}${m.unit}</span></span>
       </div>
       <div class="macro-bar-track"><div class="macro-bar-fill ${m.cls}" style="width:${pct}%"></div></div>`;
     barsWrap.appendChild(row);
