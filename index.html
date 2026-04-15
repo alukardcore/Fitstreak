@@ -2982,10 +2982,10 @@ function openAddMeal() { openModal('meal-modal'); }
 function logMeal() {
   const name = sanitizeString(document.getElementById('meal-name-input').value, 60);
   if (!name) { showToast('Enter a meal name', 'error'); return; }
-  const cal = sanitizeNumber(document.getElementById('meal-cal').value, 0, 10000);
-  const p = sanitizeNumber(document.getElementById('meal-protein').value, 0, 500);
-  const c = sanitizeNumber(document.getElementById('meal-carbs').value, 0, 1000);
-  const f = sanitizeNumber(document.getElementById('meal-fat').value, 0, 500);
+  const cal = Math.max(0, parseFloat(document.getElementById('meal-cal').value) || 0);
+  const p   = Math.max(0, parseFloat(document.getElementById('meal-protein').value) || 0);
+  const c   = Math.max(0, parseFloat(document.getElementById('meal-carbs').value) || 0);
+  const f   = Math.max(0, parseFloat(document.getElementById('meal-fat').value) || 0);
 
   const today = dateStr(new Date());
   if (!APP.nutrition.days[today]) APP.nutrition.days[today] = [];
@@ -3324,9 +3324,13 @@ function setTextContent(id, val) {
 // BOOT SEQUENCE
 // ============================================================
 function boot() {
-  // Register service worker
+  // Unregister any old service workers then register fresh — ensures stale caches are cleared
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      Promise.all(regs.map(r => r.unregister())).then(() => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    });
   }
 
   // Load data
