@@ -2589,6 +2589,7 @@ function switchExercise(exIdx) {
 }
 
 
+function getPrevSet(exId, setIdx) {
   for (let i = APP.history.length - 1; i >= 0; i--) {
     const h = APP.history[i];
     const ex = (h.exercises||[]).find(e => e.id === exId);
