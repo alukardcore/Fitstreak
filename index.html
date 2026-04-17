@@ -583,7 +583,7 @@ body {
 .sets-table { width: 100%; }
 .sets-head, .sets-row {
   display: grid;
-  grid-template-columns: 32px 1fr 1fr 1fr 40px;
+  grid-template-columns: 28px 1fr 1fr 1fr 36px 28px;
   align-items: center;
   padding: 10px 16px;
   gap: 8px;
@@ -1452,9 +1452,10 @@ canvas { display: block; }
     <!-- ===== ACTIVE WORKOUT ===== -->
     <div class="screen" id="screen-active" style="padding:0;background:var(--bg)">
       <div class="active-header">
-        <button class="btn-icon btn-danger" onclick="confirmEndWorkout()" style="flex-shrink:0">✕ End</button>
+        <button class="btn-icon btn-danger" onclick="cancelWorkout()" style="flex-shrink:0">✕ Cancel</button>
         <div class="active-workout-name" id="active-wkt-name">Workout</div>
         <div class="active-timer" id="active-timer">00:00</div>
+        <button class="btn-icon btn-accent" onclick="finishWorkout()" style="flex-shrink:0">✓ Finish</button>
       </div>
       <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
         <div class="scroll-area" id="active-exercises-list" style="flex:1;padding:16px 20px;padding-bottom:0"></div>
@@ -1711,55 +1712,115 @@ const EXERCISES = [
   // CHEST
   {id:'bench_press',name:'Bench Press',muscle:'Chest',secondary:'Triceps, Shoulders',equipment:['barbell'],type:'compound',emoji:'🏋️'},
   {id:'incline_db_press',name:'Incline DB Press',muscle:'Chest',secondary:'Shoulders',equipment:['dumbbell'],type:'compound',emoji:'💪'},
+  {id:'decline_db_press',name:'Decline DB Press',muscle:'Chest',secondary:'Triceps',equipment:['dumbbell'],type:'compound',emoji:'📉'},
   {id:'chest_fly',name:'Chest Fly',muscle:'Chest',secondary:'',equipment:['dumbbell','cable'],type:'isolation',emoji:'🦅'},
+  {id:'incline_fly',name:'Incline Chest Fly',muscle:'Chest',secondary:'',equipment:['dumbbell','cable'],type:'isolation',emoji:'🦅'},
   {id:'pushup',name:'Push-Up',muscle:'Chest',secondary:'Triceps',equipment:['bodyweight'],type:'compound',emoji:'⬆️'},
+  {id:'wide_pushup',name:'Wide Push-Up',muscle:'Chest',secondary:'',equipment:['bodyweight'],type:'compound',emoji:'↔️'},
+  {id:'diamond_pushup',name:'Diamond Push-Up',muscle:'Chest',secondary:'Triceps',equipment:['bodyweight'],type:'compound',emoji:'💎'},
   {id:'cable_crossover',name:'Cable Crossover',muscle:'Chest',secondary:'',equipment:['cable'],type:'isolation',emoji:'🔗'},
+  {id:'low_cable_fly',name:'Low Cable Fly',muscle:'Chest',secondary:'',equipment:['cable'],type:'isolation',emoji:'🔗'},
   {id:'dips',name:'Dips',muscle:'Chest',secondary:'Triceps',equipment:['bodyweight'],type:'compound',emoji:'⬇️'},
-  {id:'decline_press',name:'Decline Press',muscle:'Chest',secondary:'Triceps',equipment:['barbell'],type:'compound',emoji:'📉'},
+  {id:'decline_press',name:'Decline Barbell Press',muscle:'Chest',secondary:'Triceps',equipment:['barbell'],type:'compound',emoji:'📉'},
+  {id:'incline_bench',name:'Incline Barbell Press',muscle:'Chest',secondary:'Shoulders',equipment:['barbell'],type:'compound',emoji:'📈'},
+  {id:'machine_chest_press',name:'Machine Chest Press',muscle:'Chest',secondary:'Triceps',equipment:['machine'],type:'compound',emoji:'⚙️'},
+  {id:'pec_deck',name:'Pec Deck',muscle:'Chest',secondary:'',equipment:['machine'],type:'isolation',emoji:'🦋'},
   // BACK
   {id:'pullup',name:'Pull-Up',muscle:'Back',secondary:'Biceps',equipment:['bodyweight','pullup_bar'],type:'compound',emoji:'🆙'},
+  {id:'chinup',name:'Chin-Up',muscle:'Back',secondary:'Biceps',equipment:['bodyweight','pullup_bar'],type:'compound',emoji:'🆙'},
   {id:'deadlift',name:'Deadlift',muscle:'Back',secondary:'Glutes, Hamstrings',equipment:['barbell'],type:'compound',emoji:'💀'},
   {id:'barbell_row',name:'Barbell Row',muscle:'Back',secondary:'Biceps',equipment:['barbell'],type:'compound',emoji:'🔁'},
+  {id:'pendlay_row',name:'Pendlay Row',muscle:'Back',secondary:'Biceps',equipment:['barbell'],type:'compound',emoji:'🔁'},
+  {id:'tbar_row',name:'T-Bar Row',muscle:'Back',secondary:'Biceps',equipment:['barbell'],type:'compound',emoji:'🔄'},
   {id:'lat_pulldown',name:'Lat Pulldown',muscle:'Back',secondary:'Biceps',equipment:['cable','machine'],type:'compound',emoji:'⬇️'},
+  {id:'wide_pulldown',name:'Wide Grip Pulldown',muscle:'Back',secondary:'',equipment:['cable'],type:'compound',emoji:'⬇️'},
   {id:'seated_row',name:'Seated Cable Row',muscle:'Back',secondary:'Biceps',equipment:['cable'],type:'compound',emoji:'🚣'},
   {id:'db_row',name:'Single Arm DB Row',muscle:'Back',secondary:'Biceps',equipment:['dumbbell'],type:'compound',emoji:'💪'},
+  {id:'chest_supported_row',name:'Chest-Supported Row',muscle:'Back',secondary:'Biceps',equipment:['dumbbell','machine'],type:'compound',emoji:'🛏️'},
   {id:'face_pull',name:'Face Pull',muscle:'Back',secondary:'Rear Delts',equipment:['cable'],type:'isolation',emoji:'😤'},
   {id:'rdl',name:'Romanian Deadlift',muscle:'Back',secondary:'Hamstrings',equipment:['barbell','dumbbell'],type:'compound',emoji:'🏗️'},
+  {id:'good_morning',name:'Good Morning',muscle:'Back',secondary:'Hamstrings',equipment:['barbell'],type:'compound',emoji:'🌅'},
+  {id:'back_extension',name:'Back Extension',muscle:'Back',secondary:'Glutes',equipment:['machine','bodyweight'],type:'isolation',emoji:'🔙'},
+  {id:'straight_arm_pulldown',name:'Straight Arm Pulldown',muscle:'Back',secondary:'',equipment:['cable'],type:'isolation',emoji:'⬇️'},
+  {id:'inverted_row',name:'Inverted Row',muscle:'Back',secondary:'Biceps',equipment:['bodyweight'],type:'compound',emoji:'🔄'},
   // SHOULDERS
   {id:'ohp',name:'Overhead Press',muscle:'Shoulders',secondary:'Triceps',equipment:['barbell'],type:'compound',emoji:'☝️'},
   {id:'db_ohp',name:'DB Shoulder Press',muscle:'Shoulders',secondary:'Triceps',equipment:['dumbbell'],type:'compound',emoji:'💪'},
-  {id:'lateral_raise',name:'Lateral Raise',muscle:'Shoulders',secondary:'',equipment:['dumbbell','cable'],type:'isolation',emoji:'🦁'},
+  {id:'lateral_raise',name:'Lateral Raise',muscle:'Shoulders',secondary:'',equipment:['dumbbell','cable'],type:'isolation',emoji:'↔️'},
+  {id:'cable_lateral',name:'Cable Lateral Raise',muscle:'Shoulders',secondary:'',equipment:['cable'],type:'isolation',emoji:'🔗'},
   {id:'front_raise',name:'Front Raise',muscle:'Shoulders',secondary:'',equipment:['dumbbell','cable'],type:'isolation',emoji:'⬆️'},
   {id:'arnold_press',name:'Arnold Press',muscle:'Shoulders',secondary:'Triceps',equipment:['dumbbell'],type:'compound',emoji:'🦾'},
-  {id:'shrugs',name:'Shrugs',muscle:'Shoulders',secondary:'Traps',equipment:['barbell','dumbbell'],type:'isolation',emoji:'🤷'},
-  // ARMS
-  {id:'bicep_curl',name:'Bicep Curl',muscle:'Arms',secondary:'',equipment:['dumbbell','barbell'],type:'isolation',emoji:'💪'},
+  {id:'shrugs',name:'Barbell Shrugs',muscle:'Shoulders',secondary:'Traps',equipment:['barbell','dumbbell'],type:'isolation',emoji:'🤷'},
+  {id:'db_shrugs',name:'DB Shrugs',muscle:'Shoulders',secondary:'Traps',equipment:['dumbbell'],type:'isolation',emoji:'🤷'},
+  {id:'upright_row',name:'Upright Row',muscle:'Shoulders',secondary:'Traps',equipment:['barbell','cable'],type:'compound',emoji:'⬆️'},
+  {id:'rear_delt_fly',name:'Rear Delt Fly',muscle:'Shoulders',secondary:'',equipment:['dumbbell','cable'],type:'isolation',emoji:'🦋'},
+  {id:'machine_shoulder_press',name:'Machine Shoulder Press',muscle:'Shoulders',secondary:'',equipment:['machine'],type:'compound',emoji:'⚙️'},
+  {id:'landmine_press',name:'Landmine Press',muscle:'Shoulders',secondary:'Chest',equipment:['barbell'],type:'compound',emoji:'💥'},
+  // ARMS - BICEPS
+  {id:'bicep_curl',name:'Barbell Curl',muscle:'Arms',secondary:'',equipment:['barbell'],type:'isolation',emoji:'💪'},
+  {id:'db_curl',name:'Dumbbell Curl',muscle:'Arms',secondary:'',equipment:['dumbbell'],type:'isolation',emoji:'💪'},
   {id:'hammer_curl',name:'Hammer Curl',muscle:'Arms',secondary:'Forearms',equipment:['dumbbell'],type:'isolation',emoji:'🔨'},
   {id:'preacher_curl',name:'Preacher Curl',muscle:'Arms',secondary:'',equipment:['barbell','machine'],type:'isolation',emoji:'🙏'},
   {id:'cable_curl',name:'Cable Curl',muscle:'Arms',secondary:'',equipment:['cable'],type:'isolation',emoji:'🔗'},
+  {id:'concentration_curl',name:'Concentration Curl',muscle:'Arms',secondary:'',equipment:['dumbbell'],type:'isolation',emoji:'🎯'},
+  {id:'incline_curl',name:'Incline DB Curl',muscle:'Arms',secondary:'',equipment:['dumbbell'],type:'isolation',emoji:'📈'},
+  {id:'spider_curl',name:'Spider Curl',muscle:'Arms',secondary:'',equipment:['dumbbell','barbell'],type:'isolation',emoji:'🕷️'},
+  {id:'reverse_curl',name:'Reverse Curl',muscle:'Arms',secondary:'Forearms',equipment:['barbell','cable'],type:'isolation',emoji:'🔄'},
+  // ARMS - TRICEPS
   {id:'tricep_pushdown',name:'Tricep Pushdown',muscle:'Arms',secondary:'',equipment:['cable'],type:'isolation',emoji:'⬇️'},
+  {id:'rope_pushdown',name:'Rope Pushdown',muscle:'Arms',secondary:'',equipment:['cable'],type:'isolation',emoji:'🪢'},
   {id:'skull_crusher',name:'Skull Crusher',muscle:'Arms',secondary:'',equipment:['barbell','dumbbell'],type:'isolation',emoji:'💀'},
   {id:'overhead_tricep',name:'Overhead Tricep Ext.',muscle:'Arms',secondary:'',equipment:['dumbbell','cable'],type:'isolation',emoji:'☝️'},
   {id:'close_grip_bench',name:'Close Grip Bench',muscle:'Arms',secondary:'Chest',equipment:['barbell'],type:'compound',emoji:'🤏'},
+  {id:'tricep_kickback',name:'Tricep Kickback',muscle:'Arms',secondary:'',equipment:['dumbbell'],type:'isolation',emoji:'🦵'},
+  {id:'dip_machine',name:'Tricep Dip Machine',muscle:'Arms',secondary:'',equipment:['machine'],type:'isolation',emoji:'⚙️'},
   // LEGS
   {id:'squat',name:'Barbell Squat',muscle:'Legs',secondary:'Glutes',equipment:['barbell'],type:'compound',emoji:'🏋️'},
+  {id:'front_squat',name:'Front Squat',muscle:'Legs',secondary:'Core',equipment:['barbell'],type:'compound',emoji:'🏋️'},
   {id:'db_squat',name:'Goblet Squat',muscle:'Legs',secondary:'Glutes',equipment:['dumbbell'],type:'compound',emoji:'🏺'},
+  {id:'hack_squat',name:'Hack Squat',muscle:'Legs',secondary:'Glutes',equipment:['machine'],type:'compound',emoji:'⚙️'},
   {id:'leg_press',name:'Leg Press',muscle:'Legs',secondary:'Glutes',equipment:['machine'],type:'compound',emoji:'🦵'},
-  {id:'lunges',name:'Lunges',muscle:'Legs',secondary:'Glutes',equipment:['bodyweight','dumbbell'],type:'compound',emoji:'🚶'},
+  {id:'lunges',name:'Forward Lunges',muscle:'Legs',secondary:'Glutes',equipment:['bodyweight','dumbbell'],type:'compound',emoji:'🚶'},
+  {id:'reverse_lunge',name:'Reverse Lunge',muscle:'Legs',secondary:'Glutes',equipment:['bodyweight','dumbbell'],type:'compound',emoji:'🚶'},
+  {id:'walking_lunge',name:'Walking Lunge',muscle:'Legs',secondary:'Glutes',equipment:['bodyweight','dumbbell'],type:'compound',emoji:'🚶'},
   {id:'leg_extension',name:'Leg Extension',muscle:'Legs',secondary:'',equipment:['machine'],type:'isolation',emoji:'🦵'},
-  {id:'leg_curl',name:'Leg Curl',muscle:'Legs',secondary:'',equipment:['machine'],type:'isolation',emoji:'🔄'},
-  {id:'calf_raise',name:'Calf Raise',muscle:'Legs',secondary:'',equipment:['machine','bodyweight'],type:'isolation',emoji:'🦶'},
+  {id:'leg_curl',name:'Lying Leg Curl',muscle:'Legs',secondary:'',equipment:['machine'],type:'isolation',emoji:'🔄'},
+  {id:'seated_leg_curl',name:'Seated Leg Curl',muscle:'Legs',secondary:'',equipment:['machine'],type:'isolation',emoji:'🪑'},
+  {id:'calf_raise',name:'Standing Calf Raise',muscle:'Legs',secondary:'',equipment:['machine','bodyweight'],type:'isolation',emoji:'🦶'},
+  {id:'seated_calf',name:'Seated Calf Raise',muscle:'Legs',secondary:'',equipment:['machine'],type:'isolation',emoji:'🦶'},
   {id:'hip_thrust',name:'Hip Thrust',muscle:'Legs',secondary:'Glutes',equipment:['barbell'],type:'compound',emoji:'🍑'},
   {id:'bulgarian_split',name:'Bulgarian Split Squat',muscle:'Legs',secondary:'Glutes',equipment:['bodyweight','dumbbell'],type:'compound',emoji:'🧗'},
   {id:'sumo_deadlift',name:'Sumo Deadlift',muscle:'Legs',secondary:'Back',equipment:['barbell'],type:'compound',emoji:'🤼'},
+  {id:'step_up',name:'Step-Up',muscle:'Legs',secondary:'Glutes',equipment:['bodyweight','dumbbell'],type:'compound',emoji:'📶'},
+  {id:'glute_bridge',name:'Glute Bridge',muscle:'Legs',secondary:'',equipment:['bodyweight','barbell'],type:'isolation',emoji:'🌉'},
+  {id:'sumo_squat',name:'Sumo Squat',muscle:'Legs',secondary:'Glutes',equipment:['dumbbell','barbell'],type:'compound',emoji:'🤼'},
+  {id:'box_jump',name:'Box Jump',muscle:'Legs',secondary:'',equipment:['bodyweight'],type:'compound',emoji:'📦'},
   // CORE
   {id:'plank',name:'Plank',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'🧘'},
+  {id:'side_plank',name:'Side Plank',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'↔️'},
   {id:'crunch',name:'Crunch',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'🌀'},
+  {id:'situp',name:'Sit-Up',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'⬆️'},
   {id:'russian_twist',name:'Russian Twist',muscle:'Core',secondary:'',equipment:['bodyweight','dumbbell'],type:'isolation',emoji:'🌀'},
-  {id:'leg_raise',name:'Leg Raise',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'🦵'},
+  {id:'leg_raise',name:'Lying Leg Raise',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'🦵'},
   {id:'cable_crunch',name:'Cable Crunch',muscle:'Core',secondary:'',equipment:['cable'],type:'isolation',emoji:'🔗'},
-  {id:'ab_wheel',name:'Ab Wheel',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'⚙️'},
+  {id:'ab_wheel',name:'Ab Wheel Rollout',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'⚙️'},
   {id:'hanging_leg_raise',name:'Hanging Leg Raise',muscle:'Core',secondary:'',equipment:['pullup_bar'],type:'isolation',emoji:'🏗️'},
+  {id:'hanging_knee_raise',name:'Hanging Knee Raise',muscle:'Core',secondary:'',equipment:['pullup_bar'],type:'isolation',emoji:'🏗️'},
+  {id:'bicycle_crunch',name:'Bicycle Crunch',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'🚴'},
+  {id:'v_up',name:'V-Up',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'✌️'},
+  {id:'mountain_climber',name:'Mountain Climbers',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'compound',emoji:'🧗'},
+  {id:'dragon_flag',name:'Dragon Flag',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'🐉'},
+  {id:'pallof_press',name:'Pallof Press',muscle:'Core',secondary:'',equipment:['cable'],type:'isolation',emoji:'🔗'},
+  {id:'dead_bug',name:'Dead Bug',muscle:'Core',secondary:'',equipment:['bodyweight'],type:'isolation',emoji:'🐛'},
+  // CARDIO
+  {id:'treadmill',name:'Treadmill',muscle:'Cardio',secondary:'',equipment:['machine'],type:'cardio',emoji:'🏃'},
+  {id:'rowing',name:'Rowing Machine',muscle:'Cardio',secondary:'Back',equipment:['machine'],type:'cardio',emoji:'🚣'},
+  {id:'cycling',name:'Stationary Bike',muscle:'Cardio',secondary:'',equipment:['machine'],type:'cardio',emoji:'🚴'},
+  {id:'jump_rope',name:'Jump Rope',muscle:'Cardio',secondary:'Calves',equipment:['bodyweight'],type:'cardio',emoji:'🪢'},
+  {id:'burpees',name:'Burpees',muscle:'Cardio',secondary:'Chest',equipment:['bodyweight'],type:'cardio',emoji:'💥'},
+  {id:'jumping_jacks',name:'Jumping Jacks',muscle:'Cardio',secondary:'',equipment:['bodyweight'],type:'cardio',emoji:'⭐'},
+  {id:'stairmaster',name:'StairMaster',muscle:'Cardio',secondary:'Legs',equipment:['machine'],type:'cardio',emoji:'📶'},
+  {id:'elliptical',name:'Elliptical',muscle:'Cardio',secondary:'',equipment:['machine'],type:'cardio',emoji:'🔄'},
 ];
 
 const WORKOUT_TEMPLATES = [
@@ -1801,7 +1862,80 @@ const WORKOUT_TEMPLATES = [
   },
 ];
 
-const MUSCLES = ['All','Chest','Back','Shoulders','Arms','Legs','Core'];
+const MUSCLES = ['All','Chest','Back','Shoulders','Arms','Legs','Core','Cardio'];
+
+const FOODS = [
+  // PROTEINS
+  {id:'egg',name:'Egg',emoji:'🥚',unit:'egg',gramsPerUnit:60,cal:78,protein:6,carbs:0.6,fat:5},
+  {id:'egg_white',name:'Egg White',emoji:'🥚',unit:'egg white',gramsPerUnit:33,cal:17,protein:3.6,carbs:0.2,fat:0.1},
+  {id:'chicken_breast',name:'Chicken Breast',emoji:'🍗',unit:'piece',gramsPerUnit:150,cal:165,protein:31,carbs:0,fat:3.6},
+  {id:'chicken_thigh',name:'Chicken Thigh',emoji:'🍗',unit:'piece',gramsPerUnit:110,cal:209,protein:26,carbs:0,fat:11},
+  {id:'ground_beef',name:'Ground Beef (lean)',emoji:'🥩',unit:'serving',gramsPerUnit:100,cal:215,protein:26,carbs:0,fat:13},
+  {id:'steak',name:'Steak (sirloin)',emoji:'🥩',unit:'piece',gramsPerUnit:200,cal:340,protein:46,carbs:0,fat:16},
+  {id:'salmon',name:'Salmon',emoji:'🐟',unit:'fillet',gramsPerUnit:150,cal:280,protein:39,carbs:0,fat:13},
+  {id:'tuna_can',name:'Tuna (canned)',emoji:'🐟',unit:'can',gramsPerUnit:140,cal:130,protein:30,carbs:0,fat:1},
+  {id:'tilapia',name:'Tilapia',emoji:'🐟',unit:'fillet',gramsPerUnit:130,cal:140,protein:29,carbs:0,fat:3},
+  {id:'shrimp',name:'Shrimp',emoji:'🍤',unit:'serving',gramsPerUnit:100,cal:99,protein:24,carbs:0,fat:0.3},
+  {id:'turkey_breast',name:'Turkey Breast',emoji:'🦃',unit:'slice',gramsPerUnit:85,cal:135,protein:26,carbs:0,fat:3},
+  {id:'greek_yogurt',name:'Greek Yogurt',emoji:'🥛',unit:'cup',gramsPerUnit:245,cal:130,protein:22,carbs:9,fat:0},
+  {id:'cottage_cheese',name:'Cottage Cheese',emoji:'🧀',unit:'cup',gramsPerUnit:226,cal:180,protein:25,carbs:6,fat:5},
+  {id:'whey_protein',name:'Whey Protein Shake',emoji:'🥤',unit:'scoop',gramsPerUnit:30,cal:120,protein:25,carbs:3,fat:1.5},
+  {id:'casein',name:'Casein Protein',emoji:'🥤',unit:'scoop',gramsPerUnit:30,cal:110,protein:24,carbs:2,fat:1},
+  {id:'tofu',name:'Tofu',emoji:'🧊',unit:'serving',gramsPerUnit:100,cal:76,protein:8,carbs:2,fat:4.2},
+  {id:'tempeh',name:'Tempeh',emoji:'🧊',unit:'serving',gramsPerUnit:100,cal:193,protein:20,carbs:9,fat:11},
+  {id:'edamame',name:'Edamame',emoji:'🫘',unit:'cup',gramsPerUnit:155,cal:189,protein:17,carbs:14,fat:8},
+  // DAIRY
+  {id:'milk_whole',name:'Whole Milk',emoji:'🥛',unit:'cup',gramsPerUnit:244,cal:150,protein:8,carbs:12,fat:8},
+  {id:'milk_skim',name:'Skim Milk',emoji:'🥛',unit:'cup',gramsPerUnit:244,cal:80,protein:8,carbs:12,fat:0},
+  {id:'cheese_cheddar',name:'Cheddar Cheese',emoji:'🧀',unit:'slice',gramsPerUnit:28,cal:113,protein:7,carbs:0.4,fat:9},
+  {id:'mozzarella',name:'Mozzarella',emoji:'🧀',unit:'serving',gramsPerUnit:85,cal:200,protein:14,carbs:2,fat:15},
+  // CARBS - GRAINS
+  {id:'white_rice',name:'White Rice (cooked)',emoji:'🍚',unit:'cup',gramsPerUnit:186,cal:242,protein:4.4,carbs:53,fat:0.4},
+  {id:'brown_rice',name:'Brown Rice (cooked)',emoji:'🍚',unit:'cup',gramsPerUnit:195,cal:216,protein:5,carbs:45,fat:1.8},
+  {id:'oats',name:'Oats (dry)',emoji:'🌾',unit:'cup',gramsPerUnit:81,cal:307,protein:11,carbs:55,fat:5},
+  {id:'pasta',name:'Pasta (cooked)',emoji:'🍝',unit:'cup',gramsPerUnit:140,cal:220,protein:8,carbs:43,fat:1.3},
+  {id:'bread_white',name:'White Bread',emoji:'🍞',unit:'slice',gramsPerUnit:30,cal:79,protein:2.7,carbs:15,fat:1},
+  {id:'bread_whole',name:'Whole Wheat Bread',emoji:'🍞',unit:'slice',gramsPerUnit:30,cal:69,protein:3.6,carbs:12,fat:1.1},
+  {id:'sweet_potato',name:'Sweet Potato',emoji:'🍠',unit:'medium',gramsPerUnit:130,cal:112,protein:2,carbs:26,fat:0.1},
+  {id:'potato',name:'White Potato',emoji:'🥔',unit:'medium',gramsPerUnit:150,cal:130,protein:3,carbs:30,fat:0.1},
+  {id:'quinoa',name:'Quinoa (cooked)',emoji:'🌾',unit:'cup',gramsPerUnit:185,cal:222,protein:8,carbs:39,fat:3.5},
+  {id:'tortilla',name:'Flour Tortilla',emoji:'🫓',unit:'piece',gramsPerUnit:45,cal:146,protein:3.9,carbs:25,fat:3.5},
+  // VEGETABLES
+  {id:'broccoli',name:'Broccoli',emoji:'🥦',unit:'cup',gramsPerUnit:91,cal:31,protein:2.6,carbs:6,fat:0.3},
+  {id:'spinach',name:'Spinach',emoji:'🥬',unit:'cup',gramsPerUnit:30,cal:7,protein:0.9,carbs:1.1,fat:0.1},
+  {id:'tomato',name:'Tomato',emoji:'🍅',unit:'medium',gramsPerUnit:123,cal:22,protein:1.1,carbs:4.8,fat:0.2},
+  {id:'cucumber',name:'Cucumber',emoji:'🥒',unit:'medium',gramsPerUnit:200,cal:30,protein:1.3,carbs:7,fat:0.2},
+  {id:'bell_pepper',name:'Bell Pepper',emoji:'🫑',unit:'medium',gramsPerUnit:120,cal:31,protein:1,carbs:7,fat:0.3},
+  {id:'carrot',name:'Carrot',emoji:'🥕',unit:'medium',gramsPerUnit:61,cal:25,protein:0.6,carbs:6,fat:0.1},
+  {id:'avocado',name:'Avocado',emoji:'🥑',unit:'medium',gramsPerUnit:150,cal:240,protein:3,carbs:13,fat:22},
+  // FRUITS
+  {id:'banana',name:'Banana',emoji:'🍌',unit:'medium',gramsPerUnit:118,cal:105,protein:1.3,carbs:27,fat:0.4},
+  {id:'apple',name:'Apple',emoji:'🍎',unit:'medium',gramsPerUnit:182,cal:95,protein:0.5,carbs:25,fat:0.3},
+  {id:'orange',name:'Orange',emoji:'🍊',unit:'medium',gramsPerUnit:131,cal:62,protein:1.2,carbs:15,fat:0.2},
+  {id:'strawberry',name:'Strawberries',emoji:'🍓',unit:'cup',gramsPerUnit:152,cal:49,protein:1,carbs:12,fat:0.5},
+  {id:'blueberry',name:'Blueberries',emoji:'🫐',unit:'cup',gramsPerUnit:148,cal:84,protein:1.1,carbs:21,fat:0.5},
+  {id:'grapes',name:'Grapes',emoji:'🍇',unit:'cup',gramsPerUnit:151,cal:104,protein:1.1,carbs:27,fat:0.2},
+  // FATS & NUTS
+  {id:'olive_oil',name:'Olive Oil',emoji:'🫙',unit:'tbsp',gramsPerUnit:13.5,cal:119,protein:0,carbs:0,fat:14},
+  {id:'peanut_butter',name:'Peanut Butter',emoji:'🥜',unit:'tbsp',gramsPerUnit:16,cal:94,protein:4,carbs:3,fat:8},
+  {id:'almond_butter',name:'Almond Butter',emoji:'🥜',unit:'tbsp',gramsPerUnit:16,cal:98,protein:3.4,carbs:3,fat:9},
+  {id:'almonds',name:'Almonds',emoji:'🥜',unit:'handful',gramsPerUnit:28,cal:164,protein:6,carbs:6,fat:14},
+  {id:'walnuts',name:'Walnuts',emoji:'🥜',unit:'handful',gramsPerUnit:28,cal:185,protein:4.3,carbs:4,fat:18},
+  {id:'cashews',name:'Cashews',emoji:'🥜',unit:'handful',gramsPerUnit:28,cal:157,protein:5.2,carbs:8.6,fat:12},
+  // FAST FOOD / COMMON
+  {id:'pizza_slice',name:'Pizza Slice',emoji:'🍕',unit:'slice',gramsPerUnit:107,cal:285,protein:12,carbs:36,fat:10},
+  {id:'burger',name:'Hamburger',emoji:'🍔',unit:'burger',gramsPerUnit:200,cal:540,protein:34,carbs:41,fat:26},
+  {id:'hotdog',name:'Hot Dog',emoji:'🌭',unit:'piece',gramsPerUnit:90,cal:280,protein:11,carbs:20,fat:17},
+  {id:'french_fries',name:'French Fries',emoji:'🍟',unit:'medium portion',gramsPerUnit:117,cal:365,protein:4,carbs:48,fat:17},
+  {id:'chocolate',name:'Chocolate Bar',emoji:'🍫',unit:'bar',gramsPerUnit:44,cal:235,protein:3,carbs:26,fat:13},
+  {id:'protein_bar',name:'Protein Bar',emoji:'🍫',unit:'bar',gramsPerUnit:60,cal:210,protein:20,carbs:22,fat:7},
+  {id:'granola_bar',name:'Granola Bar',emoji:'🍫',unit:'bar',gramsPerUnit:47,cal:193,protein:4,carbs:29,fat:7},
+  // DRINKS
+  {id:'orange_juice',name:'Orange Juice',emoji:'🧃',unit:'cup',gramsPerUnit:240,cal:112,protein:1.7,carbs:26,fat:0.5},
+  {id:'coffee_black',name:'Black Coffee',emoji:'☕',unit:'cup',gramsPerUnit:240,cal:2,protein:0.3,carbs:0,fat:0},
+  {id:'latte',name:'Latte (whole milk)',emoji:'☕',unit:'cup',gramsPerUnit:360,cal:190,protein:12,carbs:18,fat:7},
+  {id:'sports_drink',name:'Sports Drink',emoji:'🥤',unit:'bottle',gramsPerUnit:591,cal:140,protein:0,carbs:36,fat:0},
+];
 const LEVEL_NAMES = ['Rookie','Amateur','Intermediate','Veteran','Elite','Legend'];
 const LEVEL_XP = [500,1200,2500,5000,9000,Infinity];
 
@@ -2216,6 +2350,7 @@ function startWorkout(wkt) {
   activeStart = Date.now();
 
   setTextContent('active-wkt-name', (wkt.emoji||'') + ' ' + wkt.name);
+  saveActiveWorkout();
   renderActiveWorkout();
   showScreen('active');
 
@@ -2266,7 +2401,15 @@ function renderActiveWorkout() {
     rmBtn.textContent = '✕';
     rmBtn.style.fontSize = '12px';
     rmBtn.onclick = () => removeExercise(exIdx);
+
+    const switchBtn = document.createElement('button');
+    switchBtn.className = 'btn-icon';
+    switchBtn.textContent = '⇄ Switch';
+    switchBtn.style.fontSize = '11px';
+    switchBtn.onclick = () => switchExercise(exIdx);
+
     header.appendChild(nameDiv);
+    header.appendChild(switchBtn);
     header.appendChild(rmBtn);
     section.appendChild(header);
 
@@ -2275,7 +2418,7 @@ function renderActiveWorkout() {
     table.className = 'sets-table';
     const head = document.createElement('div');
     head.className = 'sets-head';
-    head.innerHTML = '<div>#</div><div>Previous</div><div>Weight</div><div>Reps</div><div>✓</div>';
+    head.innerHTML = '<div>#</div><div>Previous</div><div>Weight</div><div>Reps</div><div>✓</div><div></div>';
     table.appendChild(head);
 
     ex.sets.forEach((set, setIdx) => {
@@ -2301,6 +2444,7 @@ function renderActiveWorkout() {
       wInp.inputMode = 'decimal';
       wInp.oninput = () => {
         activeWorkout.exercises[exIdx].sets[setIdx].weight = sanitizeNumber(wInp.value, 0, 9999);
+        saveActiveWorkout();
       };
 
       const rInp = document.createElement('input');
@@ -2312,6 +2456,7 @@ function renderActiveWorkout() {
       rInp.inputMode = 'numeric';
       rInp.oninput = () => {
         activeWorkout.exercises[exIdx].sets[setIdx].reps = sanitizeNumber(rInp.value, 0, 999);
+        saveActiveWorkout();
       };
 
       const check = document.createElement('div');
@@ -2319,11 +2464,21 @@ function renderActiveWorkout() {
       check.textContent = set.done ? '✓' : '';
       check.onclick = () => toggleSet(exIdx, setIdx, check, row);
 
+      const rmSetBtn = document.createElement('div');
+      rmSetBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);font-size:14px;';
+      rmSetBtn.textContent = '−';
+      rmSetBtn.onclick = () => {
+        activeWorkout.exercises[exIdx].sets.splice(setIdx, 1);
+        saveActiveWorkout();
+        renderActiveWorkout();
+      };
+
       row.appendChild(numDiv);
       row.appendChild(prevDiv);
       row.appendChild(wInp);
       row.appendChild(rInp);
       row.appendChild(check);
+      row.appendChild(rmSetBtn);
       table.appendChild(row);
     });
 
@@ -2332,6 +2487,7 @@ function renderActiveWorkout() {
     addSetBtn.textContent = '+ Add Set';
     addSetBtn.onclick = () => {
       activeWorkout.exercises[exIdx].sets.push({weight:'',reps:'',done:false});
+      saveActiveWorkout();
       renderActiveWorkout();
     };
 
@@ -2347,7 +2503,7 @@ function toggleSet(exIdx, setIdx, checkEl, rowEl) {
   checkEl.classList.toggle('done', set.done);
   checkEl.textContent = set.done ? '✓' : '';
   rowEl.style.opacity = set.done ? '0.5' : '1';
-
+  saveActiveWorkout();
   if (set.done && APP.settings.restTimerOn) {
     startRestTimer(APP.settings.restDuration || 90);
   }
@@ -2355,6 +2511,7 @@ function toggleSet(exIdx, setIdx, checkEl, rowEl) {
 
 function removeExercise(idx) {
   activeWorkout.exercises.splice(idx, 1);
+  saveActiveWorkout();
   renderActiveWorkout();
 }
 
@@ -2367,11 +2524,71 @@ function addExerciseToActive() {
       sets: [{weight:'',reps:'',done:false},{weight:'',reps:'',done:false},{weight:'',reps:'',done:false}]
     });
     closeModal('exercise-modal');
+    saveActiveWorkout();
     renderActiveWorkout();
   });
 }
 
-function getPrevSet(exId, setIdx) {
+// ============================================================
+// ACTIVE WORKOUT PERSISTENCE
+// ============================================================
+
+function saveActiveWorkout() {
+  if (!activeWorkout) return;
+  try {
+    localStorage.setItem('fitstreak_active', JSON.stringify({
+      workout: activeWorkout,
+      startTime: activeStart
+    }));
+  } catch(e) {}
+}
+
+function clearActiveWorkout() {
+  try { localStorage.removeItem('fitstreak_active'); } catch(e) {}
+}
+
+function loadActiveWorkout() {
+  try {
+    const raw = localStorage.getItem('fitstreak_active');
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (!saved || !saved.workout) return false;
+    activeWorkout = saved.workout;
+    activeStart = saved.startTime || Date.now();
+    setTextContent('active-wkt-name', (activeWorkout.emoji||'') + ' ' + activeWorkout.name);
+    renderActiveWorkout();
+    showScreen('active');
+    timerInterval = setInterval(updateActiveTimer, 1000);
+    updateNavForActiveWorkout();
+    showToast('Workout resumed!', 'success');
+    return true;
+  } catch(e) {
+    clearActiveWorkout();
+    return false;
+  }
+}
+
+function switchExercise(exIdx) {
+  openExerciseModal(exId => {
+    const ex = EXERCISES.find(e => e.id === exId);
+    if (!ex || !activeWorkout) return;
+    // Keep existing sets, just swap the exercise identity
+    const existingSets = activeWorkout.exercises[exIdx].sets;
+    activeWorkout.exercises[exIdx] = {
+      id: ex.id,
+      name: ex.name,
+      muscle: ex.muscle,
+      emoji: ex.emoji || '💪',
+      sets: existingSets
+    };
+    closeModal('exercise-modal');
+    saveActiveWorkout();
+    renderActiveWorkout();
+    showToast('Exercise switched!', 'success');
+  });
+}
+
+
   for (let i = APP.history.length - 1; i >= 0; i--) {
     const h = APP.history[i];
     const ex = (h.exercises||[]).find(e => e.id === exId);
@@ -2382,21 +2599,11 @@ function getPrevSet(exId, setIdx) {
   return null;
 }
 
-function confirmEndWorkout() {
-  if (!activeWorkout) return;
-  const doneSets = activeWorkout.exercises.reduce((n,ex) => n + ex.sets.filter(s=>s.done).length, 0);
-  if (doneSets === 0) {
-    if (confirm('End workout without logging any sets?')) {
-      cancelWorkout();
-    }
-    return;
-  }
-  finishWorkout();
-}
-
 function cancelWorkout() {
+  if (!confirm('Cancel workout? All progress will be lost.')) return;
   clearInterval(timerInterval);
   stopRestTimer();
+  clearActiveWorkout();
   activeWorkout = null;
   activeStart = null;
   updateNavForActiveWorkout();
@@ -2463,6 +2670,7 @@ function finishWorkout() {
   // Show complete screen
   showCompleteModal(record, elapsed);
 
+  clearActiveWorkout();
   activeWorkout = null;
   activeStart = null;
   updateNavForActiveWorkout();
@@ -3348,12 +3556,13 @@ function boot() {
   setTimeout(() => {
     document.getElementById('splash').classList.add('hidden');
     if (!saved || !APP.profile.name) {
-      // First launch — show onboarding
       initOnboarding();
       document.getElementById('onboarding').classList.remove('hidden');
     } else {
       document.getElementById('app').classList.remove('hidden');
       initApp();
+      // Resume in-progress workout if app was closed mid-session
+      loadActiveWorkout();
     }
   }, 1400);
 }
