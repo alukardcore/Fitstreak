@@ -2136,78 +2136,6 @@ const WORKOUT_TEMPLATES = [
 
 const MUSCLES = ['All','Chest','Back','Shoulders','Arms','Legs','Core','Cardio'];
 
-const FOODS = [
-  // PROTEINS
-  {id:'egg',name:'Egg',emoji:'🥚',unit:'egg',gramsPerUnit:60,cal:78,protein:6,carbs:0.6,fat:5},
-  {id:'egg_white',name:'Egg White',emoji:'🥚',unit:'egg white',gramsPerUnit:33,cal:17,protein:3.6,carbs:0.2,fat:0.1},
-  {id:'chicken_breast',name:'Chicken Breast',emoji:'🍗',unit:'piece',gramsPerUnit:150,cal:165,protein:31,carbs:0,fat:3.6},
-  {id:'chicken_thigh',name:'Chicken Thigh',emoji:'🍗',unit:'piece',gramsPerUnit:110,cal:209,protein:26,carbs:0,fat:11},
-  {id:'ground_beef',name:'Ground Beef (lean)',emoji:'🥩',unit:'serving',gramsPerUnit:100,cal:215,protein:26,carbs:0,fat:13},
-  {id:'steak',name:'Steak (sirloin)',emoji:'🥩',unit:'piece',gramsPerUnit:200,cal:340,protein:46,carbs:0,fat:16},
-  {id:'salmon',name:'Salmon',emoji:'🐟',unit:'fillet',gramsPerUnit:150,cal:280,protein:39,carbs:0,fat:13},
-  {id:'tuna_can',name:'Tuna (canned)',emoji:'🐟',unit:'can',gramsPerUnit:140,cal:130,protein:30,carbs:0,fat:1},
-  {id:'tilapia',name:'Tilapia',emoji:'🐟',unit:'fillet',gramsPerUnit:130,cal:140,protein:29,carbs:0,fat:3},
-  {id:'shrimp',name:'Shrimp',emoji:'🍤',unit:'serving',gramsPerUnit:100,cal:99,protein:24,carbs:0,fat:0.3},
-  {id:'turkey_breast',name:'Turkey Breast',emoji:'🦃',unit:'slice',gramsPerUnit:85,cal:135,protein:26,carbs:0,fat:3},
-  {id:'greek_yogurt',name:'Greek Yogurt',emoji:'🥛',unit:'cup',gramsPerUnit:245,cal:130,protein:22,carbs:9,fat:0},
-  {id:'cottage_cheese',name:'Cottage Cheese',emoji:'🧀',unit:'cup',gramsPerUnit:226,cal:180,protein:25,carbs:6,fat:5},
-  {id:'whey_protein',name:'Whey Protein Shake',emoji:'🥤',unit:'scoop',gramsPerUnit:30,cal:120,protein:25,carbs:3,fat:1.5},
-  {id:'casein',name:'Casein Protein',emoji:'🥤',unit:'scoop',gramsPerUnit:30,cal:110,protein:24,carbs:2,fat:1},
-  {id:'tofu',name:'Tofu',emoji:'🧊',unit:'serving',gramsPerUnit:100,cal:76,protein:8,carbs:2,fat:4.2},
-  {id:'tempeh',name:'Tempeh',emoji:'🧊',unit:'serving',gramsPerUnit:100,cal:193,protein:20,carbs:9,fat:11},
-  {id:'edamame',name:'Edamame',emoji:'🫘',unit:'cup',gramsPerUnit:155,cal:189,protein:17,carbs:14,fat:8},
-  // DAIRY
-  {id:'milk_whole',name:'Whole Milk',emoji:'🥛',unit:'cup',gramsPerUnit:244,cal:150,protein:8,carbs:12,fat:8},
-  {id:'milk_skim',name:'Skim Milk',emoji:'🥛',unit:'cup',gramsPerUnit:244,cal:80,protein:8,carbs:12,fat:0},
-  {id:'cheese_cheddar',name:'Cheddar Cheese',emoji:'🧀',unit:'slice',gramsPerUnit:28,cal:113,protein:7,carbs:0.4,fat:9},
-  {id:'mozzarella',name:'Mozzarella',emoji:'🧀',unit:'serving',gramsPerUnit:85,cal:200,protein:14,carbs:2,fat:15},
-  // CARBS - GRAINS
-  {id:'white_rice',name:'White Rice (cooked)',emoji:'🍚',unit:'cup',gramsPerUnit:186,cal:242,protein:4.4,carbs:53,fat:0.4},
-  {id:'brown_rice',name:'Brown Rice (cooked)',emoji:'🍚',unit:'cup',gramsPerUnit:195,cal:216,protein:5,carbs:45,fat:1.8},
-  {id:'oats',name:'Oats (dry)',emoji:'🌾',unit:'cup',gramsPerUnit:81,cal:307,protein:11,carbs:55,fat:5},
-  {id:'pasta',name:'Pasta (cooked)',emoji:'🍝',unit:'cup',gramsPerUnit:140,cal:220,protein:8,carbs:43,fat:1.3},
-  {id:'bread_white',name:'White Bread',emoji:'🍞',unit:'slice',gramsPerUnit:30,cal:79,protein:2.7,carbs:15,fat:1},
-  {id:'bread_whole',name:'Whole Wheat Bread',emoji:'🍞',unit:'slice',gramsPerUnit:30,cal:69,protein:3.6,carbs:12,fat:1.1},
-  {id:'sweet_potato',name:'Sweet Potato',emoji:'🍠',unit:'medium',gramsPerUnit:130,cal:112,protein:2,carbs:26,fat:0.1},
-  {id:'potato',name:'White Potato',emoji:'🥔',unit:'medium',gramsPerUnit:150,cal:130,protein:3,carbs:30,fat:0.1},
-  {id:'quinoa',name:'Quinoa (cooked)',emoji:'🌾',unit:'cup',gramsPerUnit:185,cal:222,protein:8,carbs:39,fat:3.5},
-  {id:'tortilla',name:'Flour Tortilla',emoji:'🫓',unit:'piece',gramsPerUnit:45,cal:146,protein:3.9,carbs:25,fat:3.5},
-  // VEGETABLES
-  {id:'broccoli',name:'Broccoli',emoji:'🥦',unit:'cup',gramsPerUnit:91,cal:31,protein:2.6,carbs:6,fat:0.3},
-  {id:'spinach',name:'Spinach',emoji:'🥬',unit:'cup',gramsPerUnit:30,cal:7,protein:0.9,carbs:1.1,fat:0.1},
-  {id:'tomato',name:'Tomato',emoji:'🍅',unit:'medium',gramsPerUnit:123,cal:22,protein:1.1,carbs:4.8,fat:0.2},
-  {id:'cucumber',name:'Cucumber',emoji:'🥒',unit:'medium',gramsPerUnit:200,cal:30,protein:1.3,carbs:7,fat:0.2},
-  {id:'bell_pepper',name:'Bell Pepper',emoji:'🫑',unit:'medium',gramsPerUnit:120,cal:31,protein:1,carbs:7,fat:0.3},
-  {id:'carrot',name:'Carrot',emoji:'🥕',unit:'medium',gramsPerUnit:61,cal:25,protein:0.6,carbs:6,fat:0.1},
-  {id:'avocado',name:'Avocado',emoji:'🥑',unit:'medium',gramsPerUnit:150,cal:240,protein:3,carbs:13,fat:22},
-  // FRUITS
-  {id:'banana',name:'Banana',emoji:'🍌',unit:'medium',gramsPerUnit:118,cal:105,protein:1.3,carbs:27,fat:0.4},
-  {id:'apple',name:'Apple',emoji:'🍎',unit:'medium',gramsPerUnit:182,cal:95,protein:0.5,carbs:25,fat:0.3},
-  {id:'orange',name:'Orange',emoji:'🍊',unit:'medium',gramsPerUnit:131,cal:62,protein:1.2,carbs:15,fat:0.2},
-  {id:'strawberry',name:'Strawberries',emoji:'🍓',unit:'cup',gramsPerUnit:152,cal:49,protein:1,carbs:12,fat:0.5},
-  {id:'blueberry',name:'Blueberries',emoji:'🫐',unit:'cup',gramsPerUnit:148,cal:84,protein:1.1,carbs:21,fat:0.5},
-  {id:'grapes',name:'Grapes',emoji:'🍇',unit:'cup',gramsPerUnit:151,cal:104,protein:1.1,carbs:27,fat:0.2},
-  // FATS & NUTS
-  {id:'olive_oil',name:'Olive Oil',emoji:'🫙',unit:'tbsp',gramsPerUnit:13.5,cal:119,protein:0,carbs:0,fat:14},
-  {id:'peanut_butter',name:'Peanut Butter',emoji:'🥜',unit:'tbsp',gramsPerUnit:16,cal:94,protein:4,carbs:3,fat:8},
-  {id:'almond_butter',name:'Almond Butter',emoji:'🥜',unit:'tbsp',gramsPerUnit:16,cal:98,protein:3.4,carbs:3,fat:9},
-  {id:'almonds',name:'Almonds',emoji:'🥜',unit:'handful',gramsPerUnit:28,cal:164,protein:6,carbs:6,fat:14},
-  {id:'walnuts',name:'Walnuts',emoji:'🥜',unit:'handful',gramsPerUnit:28,cal:185,protein:4.3,carbs:4,fat:18},
-  {id:'cashews',name:'Cashews',emoji:'🥜',unit:'handful',gramsPerUnit:28,cal:157,protein:5.2,carbs:8.6,fat:12},
-  // FAST FOOD / COMMON
-  {id:'pizza_slice',name:'Pizza Slice',emoji:'🍕',unit:'slice',gramsPerUnit:107,cal:285,protein:12,carbs:36,fat:10},
-  {id:'burger',name:'Hamburger',emoji:'🍔',unit:'burger',gramsPerUnit:200,cal:540,protein:34,carbs:41,fat:26},
-  {id:'hotdog',name:'Hot Dog',emoji:'🌭',unit:'piece',gramsPerUnit:90,cal:280,protein:11,carbs:20,fat:17},
-  {id:'french_fries',name:'French Fries',emoji:'🍟',unit:'medium portion',gramsPerUnit:117,cal:365,protein:4,carbs:48,fat:17},
-  {id:'chocolate',name:'Chocolate Bar',emoji:'🍫',unit:'bar',gramsPerUnit:44,cal:235,protein:3,carbs:26,fat:13},
-  {id:'protein_bar',name:'Protein Bar',emoji:'🍫',unit:'bar',gramsPerUnit:60,cal:210,protein:20,carbs:22,fat:7},
-  {id:'granola_bar',name:'Granola Bar',emoji:'🍫',unit:'bar',gramsPerUnit:47,cal:193,protein:4,carbs:29,fat:7},
-  // DRINKS
-  {id:'orange_juice',name:'Orange Juice',emoji:'🧃',unit:'cup',gramsPerUnit:240,cal:112,protein:1.7,carbs:26,fat:0.5},
-  {id:'coffee_black',name:'Black Coffee',emoji:'☕',unit:'cup',gramsPerUnit:240,cal:2,protein:0.3,carbs:0,fat:0},
-  {id:'latte',name:'Latte (whole milk)',emoji:'☕',unit:'cup',gramsPerUnit:360,cal:190,protein:12,carbs:18,fat:7},
-  {id:'sports_drink',name:'Sports Drink',emoji:'🥤',unit:'bottle',gramsPerUnit:591,cal:140,protein:0,carbs:36,fat:0},
-];
 const LEVEL_NAMES = ['Rookie','Amateur','Intermediate','Veteran','Elite','Legend'];
 const LEVEL_XP = [500,1200,2500,5000,9000,Infinity];
 
@@ -3585,10 +3513,15 @@ function renderPRs() {
   });
 }
 
-function renderHistory() {
+let _historyPage = 1;
+const HISTORY_PAGE_SIZE = 20;
+
+function renderHistory(page) {
+  page = page || 1;
+  _historyPage = page;
   const el = document.getElementById('history-list');
-  el.innerHTML = '';
-  const sorted = [...APP.history].sort((a,b) => b.id - a.id).slice(0, 20);
+  if (page === 1) el.innerHTML = '';
+  const sorted = [...APP.history].sort((a,b) => b.id - a.id);
   if (sorted.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
@@ -3608,7 +3541,12 @@ function renderHistory() {
     el.appendChild(empty);
     return;
   }
-  sorted.forEach(h => {
+  const pageItems = sorted.slice(0, page * HISTORY_PAGE_SIZE);
+  // Remove old load-more button if present
+  const oldBtn = document.getElementById('history-load-more');
+  if (oldBtn) oldBtn.remove();
+
+  pageItems.forEach(h => {
     const card = document.createElement('div');
     card.className = 'card';
     const title = document.createElement('div');
@@ -3631,6 +3569,16 @@ function renderHistory() {
     card.appendChild(xpBadge);
     el.appendChild(card);
   });
+
+  if (pageItems.length < sorted.length) {
+    const btn = document.createElement('button');
+    btn.id = 'history-load-more';
+    btn.className = 'add-meal-btn';
+    btn.style.marginBottom = '16px';
+    btn.textContent = `Load more (${sorted.length - pageItems.length} remaining)`;
+    btn.onclick = () => renderHistory(_historyPage + 1);
+    el.appendChild(btn);
+  }
 }
 
 // ============================================================
@@ -4189,6 +4137,11 @@ function filterFoods() {
   });
 }
 
+function trimNutritionDays() {
+  const keys = Object.keys(APP.nutrition.days).sort();
+  while (keys.length > 30) { delete APP.nutrition.days[keys.shift()]; }
+}
+
 function logFoodFromDB(food) {
   const portionIdx = _portionSelected[food.id] || 0;
   const portion = food.portions[portionIdx];
@@ -4205,13 +4158,7 @@ function logFoodFromDB(food) {
   const today = dateStr(new Date());
   if (!APP.nutrition.days[today]) APP.nutrition.days[today] = [];
   APP.nutrition.days[today].push(entry);
-  const keys = Object.keys(APP.nutrition.days).sort();
-  while (keys.length > 30) { delete APP.nutrition.days[keys.shift()]; }
-
-  saveData();
-  closeModal('meal-modal');
-  renderNutrition();
-  showToast(food.name + ' logged!', 'success');
+  trimNutritionDays();
 }
 
 function logMealManual() {
@@ -4225,8 +4172,7 @@ function logMealManual() {
   const today = dateStr(new Date());
   if (!APP.nutrition.days[today]) APP.nutrition.days[today] = [];
   APP.nutrition.days[today].push({ name, calories:cal, protein:p, carbs:c, fat:f });
-  const keys = Object.keys(APP.nutrition.days).sort();
-  while (keys.length > 30) { delete APP.nutrition.days[keys.shift()]; }
+  trimNutritionDays();
 
   saveData();
   closeModal('meal-modal');
@@ -4535,11 +4481,11 @@ function saveSettings() {
   if (newHeight) APP.profile.height = newHeight;
   if (newAge) APP.profile.age = newAge;
 
-  saveData();
-
   if (changed && APP.profile.weight && APP.profile.height) {
     calcNutritionGoals(APP.profile.weight, APP.profile.height, APP.profile.age, APP.profile.goal);
-    saveData();
+  }
+  saveData();
+  if (changed && APP.profile.weight && APP.profile.height) {
     renderProfile();
     renderNutrition();
     showToast('Goals updated!', 'success');
@@ -4548,7 +4494,10 @@ function saveSettings() {
 
 function exportData() {
   try {
-    const json = JSON.stringify(APP, null, 2);
+    // Exclude API key from export for security
+    const exportObj = JSON.parse(JSON.stringify(APP));
+    delete exportObj.settings.apiKey;
+    const json = JSON.stringify(exportObj, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -4556,7 +4505,7 @@ function exportData() {
     a.download = 'fitstreak-backup-' + dateStr(new Date()) + '.json';
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Data exported!', 'success');
+    showToast('Exported! (API key excluded for security)', 'success');
   } catch(e) {
     showToast('Export failed', 'error');
   }
@@ -4636,13 +4585,9 @@ function setTextContent(id, val) {
 // BOOT SEQUENCE
 // ============================================================
 function boot() {
-  // Unregister any old service workers then register fresh — ensures stale caches are cleared
+  // Register service worker — sw.js activate event handles clearing old caches
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(regs => {
-      Promise.all(regs.map(r => r.unregister())).then(() => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-      });
-    });
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
   // Load data
@@ -4654,6 +4599,12 @@ function boot() {
       APP.profile = { ...APP.profile, ...(saved.profile||{}) };
       APP.settings = { ...APP.settings, ...(saved.settings||{}) };
       APP.nutrition = { ...APP.nutrition, ...(saved.nutrition||{}) };
+      // Merge in any new templates added in code updates that user doesn't have yet
+      const savedIds = new Set((APP.workouts||[]).map(w => w.id));
+      const newTemplates = WORKOUT_TEMPLATES.filter(t => !savedIds.has(t.id)).map(t => ({...t, isTemplate:true}));
+      if (newTemplates.length) APP.workouts = [...(APP.workouts||[]), ...newTemplates];
+      // Clean up stale nutrition days on load
+      trimNutritionDays();
     } catch { APP = saved; }
   }
 
@@ -4671,8 +4622,7 @@ function boot() {
   }, 1400);
 }
 
-// Validate all ob steps on input change
-document.addEventListener('DOMContentLoaded', () => {});
+// Wire ob-input validation listeners
 document.querySelectorAll('.ob-input').forEach(inp => {
   inp.addEventListener('input', validateObStep);
 });
