@@ -2134,6 +2134,41 @@ function obNext() {
   }
 }
 
+function calcNutritionGoals(weight, height, age, goal) {
+  if (!weight || !height) return;
+  const a = age || 25;
+  const bmr = 10 * weight + 6.25 * height - 5 * a + 5;
+  const tdee = Math.round(bmr * 1.55); // moderate activity baseline
+
+  // Adjust calories based on goal
+  let calories;
+  let proteinMultiplier;
+  switch (goal) {
+    case 'lose_fat':
+      calories = Math.round(tdee * 0.80); // 20% deficit
+      proteinMultiplier = 2.2; // higher protein to preserve muscle
+      break;
+    case 'build_muscle':
+      calories = Math.round(tdee * 1.10); // 10% surplus
+      proteinMultiplier = 2.0;
+      break;
+    case 'get_strong':
+      calories = Math.round(tdee * 1.08); // small surplus
+      proteinMultiplier = 2.0;
+      break;
+    case 'stay_fit':
+    default:
+      calories = tdee; // maintenance
+      proteinMultiplier = 1.8;
+      break;
+  }
+
+  APP.nutrition.goals.calories = calories;
+  APP.nutrition.goals.protein = Math.round(weight * proteinMultiplier);
+  APP.nutrition.goals.carbs = Math.round((calories * 0.45) / 4);
+  APP.nutrition.goals.fat = Math.round((calories * 0.25) / 9);
+}
+
 function finishOnboarding() {
   const name = sanitizeString(document.getElementById('ob-name').value, 30);
   const weight = sanitizeNumber(document.getElementById('ob-weight')?.value, 0, 300);
@@ -2149,14 +2184,7 @@ function finishOnboarding() {
   };
   APP.workouts = [...WORKOUT_TEMPLATES.map(t => ({ ...t, isTemplate: true }))];
 
-  // Set calorie goal based on profile
-  if (weight && height && age) {
-    const bmr = 10 * weight + 6.25 * height - 5 * (age || 25) + 5;
-    APP.nutrition.goals.calories = Math.round(bmr * 1.55);
-    APP.nutrition.goals.protein = Math.round(weight * 2);
-    APP.nutrition.goals.carbs = Math.round((APP.nutrition.goals.calories * 0.45) / 4);
-    APP.nutrition.goals.fat = Math.round((APP.nutrition.goals.calories * 0.25) / 9);
-  }
+  calcNutritionGoals(weight, height, age, APP.profile.goal);
 
   saveData();
   document.getElementById('onboarding').classList.add('hidden');
@@ -3908,11 +3936,17 @@ function renderProfile() {
   const infoSection = document.getElementById('profile-info-section');
   if (!infoSection) return;
   infoSection.innerHTML = '<div class="profile-section-title">My Stats</div>';
+
+  const goalLabels = { build_muscle:'Build Muscle 💪', lose_fat:'Lose Fat 🔥', get_strong:'Get Stronger 🏋️', stay_fit:'Stay Fit ⚡' };
   [
-    { icon:'🎯', label:'Goal', val:APP.profile.goal?.replace('_',' ')||'—' },
-    { icon:'📊', label:'Level', val:APP.profile.level||'—' },
+    { icon:'🎯', label:'Goal', val: goalLabels[APP.profile.goal] || APP.profile.goal?.replace('_',' ') || '—' },
+    { icon:'📊', label:'Experience', val:APP.profile.level||'—' },
     { icon:'⚖️', label:'Weight', val: APP.profile.weight ? APP.profile.weight+'kg' : '—' },
     { icon:'📏', label:'Height', val: APP.profile.height ? APP.profile.height+'cm' : '—' },
+    { icon:'🔥', label:'Daily Calories', val: APP.nutrition.goals.calories + ' kcal' },
+    { icon:'🥩', label:'Protein Goal', val: APP.nutrition.goals.protein + 'g' },
+    { icon:'🌾', label:'Carbs Goal', val: APP.nutrition.goals.carbs + 'g' },
+    { icon:'🥑', label:'Fat Goal', val: APP.nutrition.goals.fat + 'g' },
   ].forEach(item => {
     const row = document.createElement('div');
     row.className = 'profile-row';
@@ -3933,6 +3967,35 @@ function renderProfile() {
     row.appendChild(val);
     infoSection.appendChild(row);
   });
+
+  // Recalculate button
+  const recalcRow = document.createElement('div');
+  recalcRow.className = 'profile-row';
+  recalcRow.style.cursor = 'pointer';
+  recalcRow.onclick = recalcNutritionGoals;
+  recalcRow.innerHTML = `
+    <div class="profile-row-left">
+      <div class="profile-row-icon">⟳</div>
+      <div class="profile-row-label" style="color:var(--accent)">Recalculate Calorie Goals</div>
+    </div>
+    <div class="profile-row-val"><span class="chevron">›</span></div>`;
+  infoSection.appendChild(recalcRow);
+
+}
+
+function recalcNutritionGoals() {
+  const { weight, height, age, goal } = APP.profile;
+  if (!weight || !height) {
+    showToast('Add your weight & height in onboarding first', 'error');
+    return;
+  }
+  calcNutritionGoals(weight, height, age, goal);
+  saveData();
+  renderProfile();
+  renderNutrition();
+
+  const goalLabels = { build_muscle:'Build Muscle (+10% surplus)', lose_fat:'Lose Fat (−20% deficit)', get_strong:'Get Stronger (+8% surplus)', stay_fit:'Maintenance' };
+  showToast('Goals updated for: ' + (goalLabels[goal] || goal), 'success');
 }
 
 function editApiKey() {
