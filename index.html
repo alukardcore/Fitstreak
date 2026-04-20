@@ -288,6 +288,9 @@ body {
 .screen-body {
   flex: 1;
   padding: 0 20px 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ====== BOTTOM NAV ====== */
@@ -1462,7 +1465,7 @@ canvas { display: block; }
         <div class="screen-title">⚡ Home</div>
         <div style="font-size:22px; cursor:pointer" onclick="showScreen('profile')">👤</div>
       </div>
-      <div class="screen-body scroll-area" style="padding-bottom:0">
+      <div class="screen-body scroll-area" style="padding-bottom:24px">
         <div class="home-hero fade-up">
           <div class="hero-greeting" id="home-greeting">Good morning</div>
           <div class="hero-name" id="home-name">Athlete</div>
@@ -1506,9 +1509,9 @@ canvas { display: block; }
         <div class="screen-title">Workouts</div>
         <button class="btn-icon btn-accent" onclick="openCreateWorkout()">+ New</button>
       </div>
-      <div class="screen-body" style="display:flex;flex-direction:column;height:100%;padding-bottom:0">
+      <div class="screen-body" style="display:flex;flex-direction:column;overflow:hidden;padding-bottom:0">
         <div class="filter-row" id="workout-filters"></div>
-        <div class="scroll-area" style="flex:1; padding-bottom: 16px" id="workout-list"></div>
+        <div class="scroll-area" style="flex:1;padding:0 0 24px" id="workout-list"></div>
       </div>
     </div>
 
@@ -1533,7 +1536,7 @@ canvas { display: block; }
       <div class="screen-header" style="padding-top: calc(var(--safe-top) + 16px)">
         <div class="screen-title">Progress</div>
       </div>
-      <div class="screen-body scroll-area" style="padding-bottom:0">
+      <div class="screen-body scroll-area" style="padding-bottom:24px">
         <div class="stat-grid fade-up" id="progress-stats"></div>
         <div class="chart-container fade-up fade-up-d1">
           <div class="chart-title">Volume This Week (kg)</div>
@@ -1556,7 +1559,7 @@ canvas { display: block; }
         <div class="screen-title">Nutrition</div>
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)" id="nutrition-date"></div>
       </div>
-      <div class="screen-body scroll-area" style="padding-bottom:0">
+      <div class="screen-body scroll-area" style="padding-bottom:24px">
         <div class="macro-ring-section fade-up" id="macro-ring-section"></div>
         <div class="section-title fade-up fade-up-d1">Today's Meals</div>
         <div id="meals-list" class="fade-up fade-up-d2"></div>
@@ -1583,7 +1586,7 @@ canvas { display: block; }
       <div class="screen-header" style="padding-top: calc(var(--safe-top) + 16px)">
         <div class="screen-title">Profile</div>
       </div>
-      <div class="screen-body scroll-area" style="padding-bottom:0">
+      <div class="screen-body scroll-area" style="padding-bottom:24px">
         <div style="text-align:center;padding:20px 0 28px">
           <div style="font-size:64px;margin-bottom:8px">👤</div>
           <div style="font-family:var(--font-display);font-size:28px;font-weight:900" id="profile-name">Athlete</div>
@@ -2742,13 +2745,18 @@ function startWorkout(wkt) {
     name: wkt.name,
     emoji: wkt.emoji,
     exercises: (wkt.exercises||[]).map(exId => {
-      const ex = EXERCISES.find(e => e.id === exId) || {id:exId,name:exId,muscle:'',emoji:'💪'};
+      const ex = EXERCISES.find(e => e.id === exId) || {id:exId,name:exId,muscle:'',emoji:'💪',type:'strength'};
+      const isCardio = ex.type === 'cardio';
+      const defaultSet = isCardio
+        ? {duration:'',distance:'',done:false}
+        : {weight:'',reps:'',done:false};
       return {
         id: ex.id,
         name: ex.name,
         muscle: ex.muscle,
         emoji: ex.emoji||'💪',
-        sets: Array.from({length: wkt.defaultSets||3}, () => ({weight:'',reps:'',done:false}))
+        type: ex.type||'strength',
+        sets: Array.from({length: isCardio ? 1 : (wkt.defaultSets||3)}, () => ({...defaultSet}))
       };
     }),
     startTime: Date.now()
@@ -2819,80 +2827,149 @@ function renderActiveWorkout() {
     header.appendChild(rmBtn);
     section.appendChild(header);
 
-    // Table
+    // Table — branch on exercise type
     const table = document.createElement('div');
     table.className = 'sets-table';
-    const head = document.createElement('div');
-    head.className = 'sets-head';
-    head.innerHTML = '<div>#</div><div>Previous</div><div>Weight</div><div>Reps</div><div>✓</div><div></div>';
-    table.appendChild(head);
+    const isCardio = ex.type === 'cardio';
 
-    ex.sets.forEach((set, setIdx) => {
-      const prev = getPrevSet(ex.id, setIdx);
-      const row = document.createElement('div');
-      row.className = 'sets-row';
-      if (set.done) row.style.opacity = '0.5';
+    if (isCardio) {
+      // Cardio: Duration / Distance / Done
+      const head = document.createElement('div');
+      head.className = 'sets-head';
+      head.style.gridTemplateColumns = '28px 1fr 1fr 36px 28px';
+      head.innerHTML = '<div>#</div><div>Duration</div><div>Distance</div><div>✓</div><div></div>';
+      table.appendChild(head);
 
-      const numDiv = document.createElement('div');
-      numDiv.className = 'set-num';
-      numDiv.textContent = setIdx + 1;
+      ex.sets.forEach((set, setIdx) => {
+        const prev = getPrevSet(ex.id, setIdx);
+        const row = document.createElement('div');
+        row.className = 'sets-row';
+        row.style.gridTemplateColumns = '28px 1fr 1fr 36px 28px';
+        if (set.done) row.style.opacity = '0.5';
 
-      const prevDiv = document.createElement('div');
-      prevDiv.style.cssText = 'font-family:var(--font-mono);font-size:11px;color:var(--text-dim);text-align:center';
-      prevDiv.textContent = prev ? prev.weight + (APP.settings.weightUnit||'kg') + ' × ' + prev.reps : '—';
+        const numDiv = document.createElement('div');
+        numDiv.className = 'set-num';
+        numDiv.textContent = setIdx + 1;
 
-      const wInp = document.createElement('input');
-      wInp.className = 'set-input';
-      wInp.type = 'number';
-      wInp.value = set.weight;
-      wInp.min = '0'; wInp.max = '9999';
-      wInp.placeholder = prev ? prev.weight : '0';
-      wInp.inputMode = 'decimal';
-      wInp.oninput = () => {
-        activeWorkout.exercises[exIdx].sets[setIdx].weight = sanitizeNumber(wInp.value, 0, 9999);
-        saveActiveWorkout();
-      };
+        const durInp = document.createElement('input');
+        durInp.className = 'set-input';
+        durInp.type = 'text';
+        durInp.value = set.duration || '';
+        durInp.placeholder = prev ? prev.duration : '30:00';
+        durInp.title = 'Duration (mm:ss or minutes)';
+        durInp.oninput = () => {
+          activeWorkout.exercises[exIdx].sets[setIdx].duration = durInp.value;
+          saveActiveWorkout();
+        };
 
-      const rInp = document.createElement('input');
-      rInp.className = 'set-input';
-      rInp.type = 'number';
-      rInp.value = set.reps;
-      rInp.min = '0'; rInp.max = '999';
-      rInp.placeholder = prev ? prev.reps : '10';
-      rInp.inputMode = 'numeric';
-      rInp.oninput = () => {
-        activeWorkout.exercises[exIdx].sets[setIdx].reps = sanitizeNumber(rInp.value, 0, 999);
-        saveActiveWorkout();
-      };
+        const distInp = document.createElement('input');
+        distInp.className = 'set-input';
+        distInp.type = 'number';
+        distInp.value = set.distance || '';
+        distInp.placeholder = prev ? prev.distance : 'km';
+        distInp.inputMode = 'decimal';
+        distInp.oninput = () => {
+          activeWorkout.exercises[exIdx].sets[setIdx].distance = distInp.value;
+          saveActiveWorkout();
+        };
 
-      const check = document.createElement('div');
-      check.className = 'set-check' + (set.done ? ' done' : '');
-      check.textContent = set.done ? '✓' : '';
-      check.onclick = () => toggleSet(exIdx, setIdx, check, row);
+        const check = document.createElement('div');
+        check.className = 'set-check' + (set.done ? ' done' : '');
+        check.textContent = set.done ? '✓' : '';
+        check.onclick = () => toggleSet(exIdx, setIdx, check, row);
 
-      const rmSetBtn = document.createElement('div');
-      rmSetBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);font-size:14px;';
-      rmSetBtn.textContent = '−';
-      rmSetBtn.onclick = () => {
-        activeWorkout.exercises[exIdx].sets.splice(setIdx, 1);
-        saveActiveWorkout();
-        renderActiveWorkout();
-      };
+        const rmSetBtn = document.createElement('div');
+        rmSetBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);font-size:14px';
+        rmSetBtn.textContent = '−';
+        rmSetBtn.onclick = () => {
+          activeWorkout.exercises[exIdx].sets.splice(setIdx, 1);
+          saveActiveWorkout();
+          renderActiveWorkout();
+        };
 
-      row.appendChild(numDiv);
-      row.appendChild(prevDiv);
-      row.appendChild(wInp);
-      row.appendChild(rInp);
-      row.appendChild(check);
-      row.appendChild(rmSetBtn);
-      table.appendChild(row);
-    });
+        row.appendChild(numDiv);
+        row.appendChild(durInp);
+        row.appendChild(distInp);
+        row.appendChild(check);
+        row.appendChild(rmSetBtn);
+        table.appendChild(row);
+      });
+
+    } else {
+      // Strength: Weight / Reps / Done
+      const head = document.createElement('div');
+      head.className = 'sets-head';
+      head.innerHTML = '<div>#</div><div>Previous</div><div>Weight</div><div>Reps</div><div>✓</div><div></div>';
+      table.appendChild(head);
+
+      ex.sets.forEach((set, setIdx) => {
+        const prev = getPrevSet(ex.id, setIdx);
+        const row = document.createElement('div');
+        row.className = 'sets-row';
+        if (set.done) row.style.opacity = '0.5';
+
+        const numDiv = document.createElement('div');
+        numDiv.className = 'set-num';
+        numDiv.textContent = setIdx + 1;
+
+        const prevDiv = document.createElement('div');
+        prevDiv.style.cssText = 'font-family:var(--font-mono);font-size:11px;color:var(--text-dim);text-align:center';
+        prevDiv.textContent = prev ? prev.weight + (APP.settings.weightUnit||'kg') + ' × ' + prev.reps : '—';
+
+        const wInp = document.createElement('input');
+        wInp.className = 'set-input';
+        wInp.type = 'number';
+        wInp.value = set.weight;
+        wInp.min = '0'; wInp.max = '9999';
+        wInp.placeholder = prev ? prev.weight : '0';
+        wInp.inputMode = 'decimal';
+        wInp.oninput = () => {
+          activeWorkout.exercises[exIdx].sets[setIdx].weight = sanitizeNumber(wInp.value, 0, 9999);
+          saveActiveWorkout();
+        };
+
+        const rInp = document.createElement('input');
+        rInp.className = 'set-input';
+        rInp.type = 'number';
+        rInp.value = set.reps;
+        rInp.min = '0'; rInp.max = '999';
+        rInp.placeholder = prev ? prev.reps : '10';
+        rInp.inputMode = 'numeric';
+        rInp.oninput = () => {
+          activeWorkout.exercises[exIdx].sets[setIdx].reps = sanitizeNumber(rInp.value, 0, 999);
+          saveActiveWorkout();
+        };
+
+        const check = document.createElement('div');
+        check.className = 'set-check' + (set.done ? ' done' : '');
+        check.textContent = set.done ? '✓' : '';
+        check.onclick = () => toggleSet(exIdx, setIdx, check, row);
+
+        const rmSetBtn = document.createElement('div');
+        rmSetBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);font-size:14px';
+        rmSetBtn.textContent = '−';
+        rmSetBtn.onclick = () => {
+          activeWorkout.exercises[exIdx].sets.splice(setIdx, 1);
+          saveActiveWorkout();
+          renderActiveWorkout();
+        };
+
+        row.appendChild(numDiv);
+        row.appendChild(prevDiv);
+        row.appendChild(wInp);
+        row.appendChild(rInp);
+        row.appendChild(check);
+        row.appendChild(rmSetBtn);
+        table.appendChild(row);
+      });
+    }
 
     const addSetBtn = document.createElement('button');
     addSetBtn.className = 'add-set-btn';
-    addSetBtn.textContent = '+ Add Set';
+    addSetBtn.textContent = isCardio ? '+ Add Session' : '+ Add Set';
     addSetBtn.onclick = () => {
-      activeWorkout.exercises[exIdx].sets.push({weight:'',reps:'',done:false});
+      const newSet = isCardio ? {duration:'',distance:'',done:false} : {weight:'',reps:'',done:false};
+      activeWorkout.exercises[exIdx].sets.push(newSet);
       saveActiveWorkout();
       renderActiveWorkout();
     };
@@ -2925,9 +3002,13 @@ function addExerciseToActive() {
   openExerciseModal(exId => {
     const ex = EXERCISES.find(e => e.id === exId);
     if (!ex || !activeWorkout) return;
+    const isCardio = ex.type === 'cardio';
     activeWorkout.exercises.push({
       id: ex.id, name: ex.name, muscle: ex.muscle, emoji: ex.emoji||'💪',
-      sets: [{weight:'',reps:'',done:false},{weight:'',reps:'',done:false},{weight:'',reps:'',done:false}]
+      type: ex.type||'strength',
+      sets: isCardio
+        ? [{duration:'',distance:'',done:false}]
+        : [{weight:'',reps:'',done:false},{weight:'',reps:'',done:false},{weight:'',reps:'',done:false}]
     });
     closeModal('exercise-modal');
     saveActiveWorkout();
