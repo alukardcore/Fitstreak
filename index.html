@@ -1600,6 +1600,18 @@ canvas { display: block; }
         <div class="profile-section fade-up fade-up-d2">
           <div class="profile-section-title">Preferences</div>
           <div class="profile-row">
+            <div class="profile-row-left"><div class="profile-row-icon">🏃</div><div class="profile-row-label">Activity Level</div></div>
+            <div class="profile-row-val">
+              <select id="activity-level-sel" style="background:transparent;border:none;color:var(--text-muted);font-family:var(--font-mono);font-size:11px;outline:none;cursor:pointer;max-width:160px;text-align:right" onchange="saveSettings()">
+                <option value="1.2">Sedentary (no gym)</option>
+                <option value="1.375">Light (1–2x/week)</option>
+                <option value="1.55">Moderate (3–5x/week)</option>
+                <option value="1.725">Very Active (6–7x/week)</option>
+                <option value="1.9">Athlete (2x/day)</option>
+              </select>
+            </div>
+          </div>
+          <div class="profile-row">
             <div class="profile-row-left"><div class="profile-row-icon">⚖️</div><div class="profile-row-label">Weight Unit</div></div>
             <div class="profile-row-val">
               <select id="weight-unit-sel" style="background:transparent;border:none;color:var(--text-muted);font-family:var(--font-mono);font-size:12px;outline:none;cursor:pointer" onchange="saveSettings()">
@@ -2051,7 +2063,7 @@ function sanitizeNumber(val, min=0, max=99999) {
 // ============================================================
 let APP = {
   profile: { name:'', goal:'build_muscle', level:'beginner', equipment:[], weight:0, height:0, age:0 },
-  settings: { weightUnit:'kg', restTimerOn:true, restDuration:90, apiKey:'' },
+  settings: { weightUnit:'kg', restTimerOn:true, restDuration:90, apiKey:'', activityLevel:1.55 },
   workouts: [],
   history: [],
   nutrition: { goals: { calories:2500, protein:170, carbs:300, fat:80 }, days: {} },
@@ -2138,7 +2150,8 @@ function calcNutritionGoals(weight, height, age, goal) {
   if (!weight || !height) return;
   const a = age || 25;
   const bmr = 10 * weight + 6.25 * height - 5 * a + 5;
-  const tdee = Math.round(bmr * 1.55); // moderate activity baseline
+  const activityMultiplier = parseFloat(APP.settings.activityLevel) || 1.55;
+  const tdee = Math.round(bmr * activityMultiplier);
 
   // Adjust calories based on goal
   let calories;
@@ -3930,6 +3943,9 @@ function renderProfile() {
   const restDur = document.getElementById('rest-dur-display');
   if (restDur) restDur.textContent = (APP.settings.restDuration || 90) + 's';
 
+  const actSel = document.getElementById('activity-level-sel');
+  if (actSel) actSel.value = String(APP.settings.activityLevel || 1.55);
+
   const unitSel = document.getElementById('weight-unit-sel');
   if (unitSel) unitSel.value = APP.settings.weightUnit || 'kg';
 
@@ -4034,7 +4050,18 @@ function editRestDuration() {
 
 function saveSettings() {
   APP.settings.weightUnit = document.getElementById('weight-unit-sel')?.value || 'kg';
+  const newActivity = parseFloat(document.getElementById('activity-level-sel')?.value) || 1.55;
+  const changed = newActivity !== APP.settings.activityLevel;
+  APP.settings.activityLevel = newActivity;
   saveData();
+  // Auto-recalculate if activity level changed and we have profile data
+  if (changed && APP.profile.weight && APP.profile.height) {
+    calcNutritionGoals(APP.profile.weight, APP.profile.height, APP.profile.age, APP.profile.goal);
+    saveData();
+    renderProfile();
+    renderNutrition();
+    showToast('Calorie goals updated!', 'success');
+  }
 }
 
 function exportData() {
