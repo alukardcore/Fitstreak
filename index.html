@@ -1600,6 +1600,17 @@ canvas { display: block; }
         <div class="profile-section fade-up fade-up-d2">
           <div class="profile-section-title">Preferences</div>
           <div class="profile-row">
+            <div class="profile-row-left"><div class="profile-row-icon">🎯</div><div class="profile-row-label">My Goal</div></div>
+            <div class="profile-row-val">
+              <select id="goal-sel" style="background:transparent;border:none;color:var(--text-muted);font-family:var(--font-mono);font-size:11px;outline:none;cursor:pointer;max-width:160px;text-align:right" onchange="saveSettings()">
+                <option value="build_muscle">💪 Build Muscle</option>
+                <option value="lose_fat">🔥 Lose Fat</option>
+                <option value="get_strong">🏋️ Get Stronger</option>
+                <option value="stay_fit">⚡ Stay Fit</option>
+              </select>
+            </div>
+          </div>
+          <div class="profile-row">
             <div class="profile-row-left"><div class="profile-row-icon">🏃</div><div class="profile-row-label">Activity Level</div></div>
             <div class="profile-row-val">
               <select id="activity-level-sel" style="background:transparent;border:none;color:var(--text-muted);font-family:var(--font-mono);font-size:11px;outline:none;cursor:pointer;max-width:160px;text-align:right" onchange="saveSettings()">
@@ -1609,6 +1620,24 @@ canvas { display: block; }
                 <option value="1.725">Very Active (6–7x/week)</option>
                 <option value="1.9">Athlete (2x/day)</option>
               </select>
+            </div>
+          </div>
+          <div class="profile-row">
+            <div class="profile-row-left"><div class="profile-row-icon">⚖️</div><div class="profile-row-label">Weight (kg)</div></div>
+            <div class="profile-row-val">
+              <input id="profile-weight" type="number" min="30" max="300" style="background:transparent;border:none;color:var(--text-muted);font-family:var(--font-mono);font-size:12px;outline:none;width:60px;text-align:right" onchange="saveSettings()" placeholder="—">
+            </div>
+          </div>
+          <div class="profile-row">
+            <div class="profile-row-left"><div class="profile-row-icon">📏</div><div class="profile-row-label">Height (cm)</div></div>
+            <div class="profile-row-val">
+              <input id="profile-height" type="number" min="100" max="250" style="background:transparent;border:none;color:var(--text-muted);font-family:var(--font-mono);font-size:12px;outline:none;width:60px;text-align:right" onchange="saveSettings()" placeholder="—">
+            </div>
+          </div>
+          <div class="profile-row">
+            <div class="profile-row-left"><div class="profile-row-icon">🎂</div><div class="profile-row-label">Age</div></div>
+            <div class="profile-row-val">
+              <input id="profile-age" type="number" min="13" max="100" style="background:transparent;border:none;color:var(--text-muted);font-family:var(--font-mono);font-size:12px;outline:none;width:60px;text-align:right" onchange="saveSettings()" placeholder="—">
             </div>
           </div>
           <div class="profile-row">
@@ -3946,8 +3975,18 @@ function renderProfile() {
   const actSel = document.getElementById('activity-level-sel');
   if (actSel) actSel.value = String(APP.settings.activityLevel || 1.55);
 
+  const goalSel = document.getElementById('goal-sel');
+  if (goalSel) goalSel.value = APP.profile.goal || 'build_muscle';
+
   const unitSel = document.getElementById('weight-unit-sel');
   if (unitSel) unitSel.value = APP.settings.weightUnit || 'kg';
+
+  const pwEl = document.getElementById('profile-weight');
+  if (pwEl) pwEl.value = APP.profile.weight || '';
+  const phEl = document.getElementById('profile-height');
+  if (phEl) phEl.value = APP.profile.height || '';
+  const paEl = document.getElementById('profile-age');
+  if (paEl) paEl.value = APP.profile.age || '';
 
   const infoSection = document.getElementById('profile-info-section');
   if (!infoSection) return;
@@ -4051,16 +4090,31 @@ function editRestDuration() {
 function saveSettings() {
   APP.settings.weightUnit = document.getElementById('weight-unit-sel')?.value || 'kg';
   const newActivity = parseFloat(document.getElementById('activity-level-sel')?.value) || 1.55;
-  const changed = newActivity !== APP.settings.activityLevel;
+  const newGoal = document.getElementById('goal-sel')?.value || APP.profile.goal;
+  const newWeight = sanitizeNumber(document.getElementById('profile-weight')?.value, 0, 300);
+  const newHeight = sanitizeNumber(document.getElementById('profile-height')?.value, 0, 250);
+  const newAge = sanitizeNumber(document.getElementById('profile-age')?.value, 0, 100);
+
+  const changed = newActivity !== APP.settings.activityLevel
+    || newGoal !== APP.profile.goal
+    || newWeight !== APP.profile.weight
+    || newHeight !== APP.profile.height
+    || newAge !== APP.profile.age;
+
   APP.settings.activityLevel = newActivity;
+  APP.profile.goal = newGoal;
+  if (newWeight) APP.profile.weight = newWeight;
+  if (newHeight) APP.profile.height = newHeight;
+  if (newAge) APP.profile.age = newAge;
+
   saveData();
-  // Auto-recalculate if activity level changed and we have profile data
+
   if (changed && APP.profile.weight && APP.profile.height) {
     calcNutritionGoals(APP.profile.weight, APP.profile.height, APP.profile.age, APP.profile.goal);
     saveData();
     renderProfile();
     renderNutrition();
-    showToast('Calorie goals updated!', 'success');
+    showToast('Goals updated!', 'success');
   }
 }
 
