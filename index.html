@@ -1793,7 +1793,22 @@ canvas { display: block; }
       <input class="modal-input" id="new-wkt-name" type="text" placeholder="Workout name" maxlength="40" autocomplete="off">
       <div class="ob-label" style="margin-bottom:8px">Target Muscles</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px" id="new-wkt-muscles"></div>
-      <button class="btn-primary" onclick="createCustomWorkout()">Create Workout</button>
+      <button class="btn-primary" onclick="createCustomWorkout()">Create & Add Exercises →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== MODAL: Edit Workout ====== -->
+<div class="modal-overlay hidden" id="edit-workout-modal">
+  <div class="modal-sheet" style="max-height:92vh">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="edit-wkt-modal-title">Edit Workout</div>
+      <button class="modal-close" onclick="closeModal('edit-workout-modal')">✕</button>
+    </div>
+    <div style="padding:12px 20px 0">
+      <div id="edit-wkt-exercise-list" style="max-height:55vh;overflow-y:auto;scrollbar-width:none;margin-bottom:12px"></div>
+      <button class="btn-primary" style="margin-bottom:16px" onclick="addExerciseToEditingWorkout()">+ Add Exercise</button>
     </div>
   </div>
 </div>
@@ -2538,7 +2553,7 @@ function createWorkoutCard(wkt, compact) {
   row.className = 'card-row';
 
   const meta = document.createElement('div');
-  meta.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+  meta.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center';
   (wkt.tags||[]).slice(0,3).forEach(tag => {
     const badge = document.createElement('div');
     badge.className = 'card-badge';
@@ -2551,13 +2566,23 @@ function createWorkoutCard(wkt, compact) {
   exCount.textContent = (wkt.exercises||[]).length + ' exercises';
   meta.appendChild(exCount);
 
+  const btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px;flex-shrink:0';
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn-icon';
+  editBtn.textContent = '✏️ Edit';
+  editBtn.onclick = (e) => { e.stopPropagation(); openEditWorkout(wkt); };
+
   const startBtn = document.createElement('button');
   startBtn.className = 'btn-icon btn-accent';
   startBtn.textContent = '▶ Start';
   startBtn.onclick = (e) => { e.stopPropagation(); startWorkout(wkt); };
 
+  btns.appendChild(editBtn);
+  btns.appendChild(startBtn);
   row.appendChild(meta);
-  row.appendChild(startBtn);
+  row.appendChild(btns);
   card.appendChild(row);
 
   return card;
@@ -2591,7 +2616,7 @@ function createCustomWorkout() {
     exercises: [],
     defaultSets: 3,
     emoji: '⚙️',
-    description: 'Custom workout',
+    description: tags.length ? tags.join(', ') : 'Custom workout',
     isCustom: true
   };
   if (!APP.customWorkouts) APP.customWorkouts = [];
@@ -2599,7 +2624,105 @@ function createCustomWorkout() {
   saveData();
   closeModal('create-workout-modal');
   renderWorkouts();
-  showToast('Workout created!', 'success');
+  // Open edit modal immediately so user can add exercises
+  openEditWorkout(wkt);
+}
+
+// ---- currently editing workout reference ----
+let _editingWkt = null;
+let _editingIsCustom = false;
+
+function openEditWorkout(wkt) {
+  _editingWkt = wkt;
+  // Determine if it's a custom workout or a template copy
+  _editingIsCustom = !!(wkt.isCustom);
+  document.getElementById('edit-wkt-modal-title').textContent = (wkt.emoji||'🏋️') + ' ' + wkt.name;
+  renderEditWorkoutExercises();
+  openModal('edit-workout-modal');
+}
+
+function renderEditWorkoutExercises() {
+  const list = document.getElementById('edit-wkt-exercise-list');
+  list.innerHTML = '';
+
+  const exercises = _editingWkt.exercises || [];
+
+  if (exercises.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;padding:24px;color:var(--text-dim);font-size:13px';
+    empty.textContent = 'No exercises yet — tap "+ Add Exercise" below';
+    list.appendChild(empty);
+    return;
+  }
+
+  exercises.forEach((exId, idx) => {
+    // exId can be a string id or already an object (for custom workouts mid-edit)
+    const exData = typeof exId === 'string'
+      ? EXERCISES.find(e => e.id === exId) || { id: exId, name: exId, muscle: '', emoji: '💪' }
+      : exId;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)';
+
+    const icon = document.createElement('div');
+    icon.style.cssText = 'font-size:22px;flex-shrink:0';
+    icon.textContent = exData.emoji || '💪';
+
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0';
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)';
+    nameEl.textContent = exData.name;
+    const muscleEl = document.createElement('div');
+    muscleEl.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px';
+    muscleEl.textContent = exData.muscle || '';
+    info.appendChild(nameEl);
+    info.appendChild(muscleEl);
+
+    const rmBtn = document.createElement('button');
+    rmBtn.className = 'btn-icon btn-danger';
+    rmBtn.style.cssText = 'padding:6px 10px;font-size:12px;flex-shrink:0';
+    rmBtn.textContent = '✕';
+    rmBtn.onclick = () => {
+      _editingWkt.exercises.splice(idx, 1);
+      saveEditedWorkout();
+      renderEditWorkoutExercises();
+    };
+
+    row.appendChild(icon);
+    row.appendChild(info);
+    row.appendChild(rmBtn);
+    list.appendChild(row);
+  });
+}
+
+function addExerciseToEditingWorkout() {
+  openExerciseModal(exId => {
+    if (!_editingWkt) return;
+    // Avoid duplicates
+    const exists = (_editingWkt.exercises || []).some(e => e === exId || e?.id === exId);
+    if (exists) { showToast('Already in this workout', 'error'); return; }
+    if (!_editingWkt.exercises) _editingWkt.exercises = [];
+    _editingWkt.exercises.push(exId);
+    saveEditedWorkout();
+    closeModal('exercise-modal');
+    renderEditWorkoutExercises();
+    renderWorkouts();
+    showToast('Exercise added!', 'success');
+  });
+}
+
+function saveEditedWorkout() {
+  // Update in customWorkouts or APP.workouts
+  if (_editingWkt.isCustom) {
+    const idx = (APP.customWorkouts || []).findIndex(w => w.id === _editingWkt.id);
+    if (idx !== -1) APP.customWorkouts[idx] = _editingWkt;
+  } else {
+    const idx = (APP.workouts || []).findIndex(w => w.id === _editingWkt.id);
+    if (idx !== -1) APP.workouts[idx] = _editingWkt;
+  }
+  saveData();
+  renderWorkouts();
 }
 
 // ============================================================
