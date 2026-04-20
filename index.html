@@ -3104,9 +3104,40 @@ function finishWorkout() {
   stopRestTimer();
 
   const elapsed = Math.floor((Date.now() - activeStart) / 1000);
-  const totalVolume = activeWorkout.exercises.reduce((vol, ex) =>
+
+  // Separate strength and cardio exercises
+  const strengthExercises = activeWorkout.exercises.filter(ex => ex.type !== 'cardio');
+  const cardioExercises   = activeWorkout.exercises.filter(ex => ex.type === 'cardio');
+
+  // Strength: volume = weight × reps
+  const totalVolume = strengthExercises.reduce((vol, ex) =>
     vol + ex.sets.reduce((s, set) => s + (set.done ? (parseFloat(set.weight)||0) * (parseFloat(set.reps)||0) : 0), 0), 0);
-  const doneSets = activeWorkout.exercises.reduce((n,ex) => n + ex.sets.filter(s=>s.done).length, 0);
+  const doneSets = strengthExercises.reduce((n, ex) => n + ex.sets.filter(s => s.done).length, 0);
+
+  // Cardio: total distance (km) and total duration (minutes)
+  let totalCardioKm = 0;
+  let totalCardioMinutes = 0;
+  cardioExercises.forEach(ex => {
+    ex.sets.filter(s => s.done).forEach(set => {
+      totalCardioKm += parseFloat(set.distance) || 0;
+      // Parse duration: accepts "30:00" or plain minutes
+      const dur = set.duration || '';
+      if (dur.includes(':')) {
+        const parts = dur.split(':');
+        totalCardioMinutes += (parseInt(parts[0])||0) + (parseInt(parts[1])||0) / 60;
+      } else {
+        totalCardioMinutes += parseFloat(dur) || 0;
+      }
+    });
+  });
+
+  // XP: strength sets + cardio time + cardio distance
+  const xpGained = Math.round(
+    doneSets * 10 +
+    totalVolume * 0.05 +
+    totalCardioMinutes * 5 +
+    totalCardioKm * 10
+  );
 
   // Save to history
   const record = {
@@ -3117,25 +3148,48 @@ function finishWorkout() {
     date: dateStr(new Date()),
     duration: elapsed,
     volume: Math.round(totalVolume),
+    cardioKm: Math.round(totalCardioKm * 10) / 10,
+    cardioMinutes: Math.round(totalCardioMinutes * 10) / 10,
     exercises: activeWorkout.exercises.map(ex => ({
-      id: ex.id, name: ex.name,
-      sets: ex.sets.filter(s=>s.done).map(s=>({weight:parseFloat(s.weight)||0, reps:parseFloat(s.reps)||0}))
+      id: ex.id, name: ex.name, type: ex.type || 'strength',
+      sets: ex.sets.filter(s => s.done).map(s => ex.type === 'cardio'
+        ? { duration: s.duration, distance: parseFloat(s.distance)||0 }
+        : { weight: parseFloat(s.weight)||0, reps: parseFloat(s.reps)||0 }
+      )
     })),
-    xpGained: Math.round(doneSets * 10 + totalVolume * 0.05)
+    xpGained
   };
 
   APP.history.push(record);
 
-  // Update PRs
+  // Update PRs — strength: e1rm; cardio: longest distance + longest duration
   record.exercises.forEach(ex => {
-    ex.sets.forEach(set => {
-      if (set.weight > 0 && set.reps > 0) {
-        const e1rm = set.weight * (1 + set.reps / 30);
-        if (!APP.prs[ex.id] || e1rm > APP.prs[ex.id].e1rm) {
-          APP.prs[ex.id] = { weight: set.weight, reps: set.reps, e1rm, date: dateStr(new Date()), name: ex.name };
+    if (ex.type === 'cardio') {
+      ex.sets.forEach(set => {
+        const km = set.distance || 0;
+        const dur = set.duration || '';
+        let mins = 0;
+        if (typeof dur === 'string' && dur.includes(':')) {
+          const p = dur.split(':');
+          mins = (parseInt(p[0])||0) + (parseInt(p[1])||0)/60;
+        } else { mins = parseFloat(dur)||0; }
+
+        if (!APP.prs[ex.id]) APP.prs[ex.id] = { name: ex.name, type: 'cardio', bestKm: 0, bestMins: 0, date: '' };
+        let updated = false;
+        if (km > (APP.prs[ex.id].bestKm || 0)) { APP.prs[ex.id].bestKm = km; updated = true; }
+        if (mins > (APP.prs[ex.id].bestMins || 0)) { APP.prs[ex.id].bestMins = mins; updated = true; }
+        if (updated) APP.prs[ex.id].date = dateStr(new Date());
+      });
+    } else {
+      ex.sets.forEach(set => {
+        if (set.weight > 0 && set.reps > 0) {
+          const e1rm = set.weight * (1 + set.reps / 30);
+          if (!APP.prs[ex.id] || e1rm > APP.prs[ex.id].e1rm) {
+            APP.prs[ex.id] = { weight: set.weight, reps: set.reps, e1rm, date: dateStr(new Date()), name: ex.name, type: 'strength' };
+          }
         }
-      }
-    });
+      });
+    }
   });
 
   // Update streak
@@ -3150,12 +3204,8 @@ function finishWorkout() {
     APP.lastWorkoutDate = today;
   }
 
-  // Award XP
-  APP.xp += record.xpGained;
-
+  APP.xp += xpGained;
   saveData();
-
-  // Show complete screen
   showCompleteModal(record, elapsed);
 
   clearActiveWorkout();
@@ -3173,11 +3223,20 @@ function showCompleteModal(record, elapsed) {
 
   const statsEl = document.getElementById('complete-stats');
   statsEl.innerHTML = '';
+
+  const hasCardio   = record.cardioKm > 0 || record.cardioMinutes > 0;
+  const hasStrength = record.volume > 0;
+
   const stats = [
     { val: m + ':' + s.toString().padStart(2,'0'), lbl: 'Duration' },
-    { val: Math.round(record.volume).toLocaleString(), lbl: 'Volume kg' },
-    { val: record.exercises.reduce((n,e)=>n+e.sets.length,0), lbl: 'Sets Done' },
+    hasStrength
+      ? { val: Math.round(record.volume).toLocaleString(), lbl: 'Volume kg' }
+      : { val: (record.cardioKm || 0) + ' km', lbl: 'Distance' },
+    hasCardio && !hasStrength
+      ? { val: Math.round(record.cardioMinutes) + ' min', lbl: 'Cardio Time' }
+      : { val: record.exercises.reduce((n,e)=>n+e.sets.length,0), lbl: 'Sets Done' },
   ];
+
   stats.forEach(st => {
     const el = document.createElement('div');
     el.className = 'complete-stat';
@@ -3338,7 +3397,7 @@ function renderProgress() {
   // Stats
   const totalVol = APP.history.reduce((v,h) => v+h.volume, 0);
   const totalTime = APP.history.reduce((t,h) => t+h.duration, 0);
-  const avgVol = APP.history.length ? Math.round(totalVol / APP.history.length) : 0;
+  const totalKm = APP.history.reduce((k,h) => k+(h.cardioKm||0), 0);
 
   const statsEl = document.getElementById('progress-stats');
   statsEl.innerHTML = '';
@@ -3346,7 +3405,9 @@ function renderProgress() {
     { val: APP.history.length, lbl: 'Workouts' },
     { val: APP.streak + '🔥', lbl: 'Streak' },
     { val: Math.round(totalTime/3600) + 'h', lbl: 'Total Time' },
-    { val: Math.round(totalVol/1000) + 't', lbl: 'Total Volume' },
+    { val: Math.round(totalVol/1000) + 't', lbl: 'Strength Vol' },
+    { val: Math.round(totalKm * 10)/10 + 'km', lbl: 'Cardio Dist' },
+    { val: APP.xp, lbl: 'Total XP' },
   ].forEach(s => {
     const el = document.createElement('div');
     el.className = 'stat-card';
@@ -3462,8 +3523,8 @@ function drawBarChart(canvas, data, labels) {
 function renderPRs() {
   const el = document.getElementById('pr-list');
   el.innerHTML = '';
-  const prs = Object.values(APP.prs).sort((a,b) => b.e1rm - a.e1rm).slice(0, 8);
-  if (prs.length === 0) {
+  const allPrs = Object.values(APP.prs);
+  if (allPrs.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
     empty.style.padding = '30px';
@@ -3478,26 +3539,48 @@ function renderPRs() {
     el.appendChild(empty);
     return;
   }
-  prs.forEach((pr, i) => {
+
+  // Strength PRs sorted by e1rm
+  const strengthPrs = allPrs.filter(p => p.type !== 'cardio').sort((a,b) => b.e1rm - a.e1rm).slice(0, 6);
+  // Cardio PRs
+  const cardioPrs = allPrs.filter(p => p.type === 'cardio');
+
+  [...strengthPrs, ...cardioPrs].forEach((pr, i) => {
     const row = document.createElement('div');
     row.className = 'pr-item';
     const rank = document.createElement('div');
     rank.className = 'pr-rank';
-    rank.textContent = '#' + (i+1);
+    rank.textContent = pr.type === 'cardio' ? '🏃' : '#' + (i + 1);
     const name = document.createElement('div');
     name.className = 'pr-name';
     name.textContent = pr.name;
     const val = document.createElement('div');
     val.className = 'pr-val';
-    val.textContent = pr.weight;
-    const unit = document.createElement('span');
-    unit.className = 'pr-unit';
-    unit.textContent = (APP.settings.weightUnit||'kg') + ' × ' + pr.reps;
-    val.appendChild(unit);
+    if (pr.type === 'cardio') {
+      val.style.display = 'flex';
+      val.style.flexDirection = 'column';
+      val.style.alignItems = 'flex-end';
+      if (pr.bestKm) {
+        const km = document.createElement('div');
+        km.innerHTML = pr.bestKm + '<span class="pr-unit">km</span>';
+        val.appendChild(km);
+      }
+      if (pr.bestMins) {
+        const mins = document.createElement('div');
+        mins.style.cssText = 'font-size:14px;color:var(--text-muted)';
+        mins.textContent = Math.round(pr.bestMins) + ' min';
+        val.appendChild(mins);
+      }
+    } else {
+      val.textContent = pr.weight;
+      const unit = document.createElement('span');
+      unit.className = 'pr-unit';
+      unit.textContent = (APP.settings.weightUnit||'kg') + ' × ' + pr.reps;
+      val.appendChild(unit);
+    }
     row.appendChild(rank);
     row.appendChild(name);
     row.appendChild(val);
-    el.querySelector('.profile-section-title')?.after(row);
     el.appendChild(row);
   });
 }
@@ -3534,7 +3617,11 @@ function renderHistory() {
     const m = Math.floor(h.duration/60);
     const sub = document.createElement('div');
     sub.className = 'card-sub';
-    sub.textContent = h.date + ' · ' + m + 'min · ' + h.volume + (APP.settings.weightUnit||'kg') + ' vol';
+    const parts = [h.date, m + 'min'];
+    if (h.volume > 0) parts.push(h.volume + (APP.settings.weightUnit||'kg') + ' vol');
+    if (h.cardioKm > 0) parts.push(h.cardioKm + 'km');
+    if (h.cardioMinutes > 0 && !h.cardioKm) parts.push(Math.round(h.cardioMinutes) + 'min cardio');
+    sub.textContent = parts.join(' · ');
     const xpBadge = document.createElement('div');
     xpBadge.className = 'card-badge';
     xpBadge.style.marginTop = '8px';
