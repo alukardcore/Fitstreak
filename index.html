@@ -1941,41 +1941,178 @@ const EXERCISES = [
 ];
 
 const WORKOUT_TEMPLATES = [
+  // ── PUSH / PULL / LEGS ──
   {
     id:'push_a',name:'Push Day A',tags:['Push','Chest','Shoulders','Triceps'],
     exercises:['bench_press','incline_db_press','ohp','lateral_raise','tricep_pushdown','skull_crusher'],
     defaultSets:4,emoji:'🔴',
-    description:'Classic chest, shoulder & tricep session'
+    description:'Chest, shoulders & triceps — horizontal & vertical press'
+  },
+  {
+    id:'push_b',name:'Push Day B',tags:['Push','Chest','Shoulders','Triceps'],
+    exercises:['incline_bench','machine_chest_press','db_ohp','cable_lateral','rope_pushdown','overhead_tricep'],
+    defaultSets:4,emoji:'🔴',
+    description:'Push variation with more isolation work'
   },
   {
     id:'pull_a',name:'Pull Day A',tags:['Pull','Back','Biceps'],
     exercises:['deadlift','barbell_row','lat_pulldown','seated_row','bicep_curl','hammer_curl'],
     defaultSets:4,emoji:'🔵',
-    description:'Back and bicep strength builder'
+    description:'Back & biceps — compound-focused'
   },
   {
-    id:'legs_a',name:'Leg Day A',tags:['Legs','Glutes'],
+    id:'pull_b',name:'Pull Day B',tags:['Pull','Back','Biceps'],
+    exercises:['rdl','pullup','db_row','wide_pulldown','face_pull','cable_curl'],
+    defaultSets:4,emoji:'🔵',
+    description:'Pull variation with more posterior chain'
+  },
+  {
+    id:'legs_a',name:'Leg Day A',tags:['Legs','Quads','Glutes'],
     exercises:['squat','leg_press','lunges','leg_extension','leg_curl','calf_raise'],
     defaultSets:4,emoji:'🟢',
-    description:'Full lower body hypertrophy'
+    description:'Quad-dominant lower body session'
   },
   {
-    id:'upper',name:'Upper Body',tags:['Upper','Full'],
-    exercises:['bench_press','barbell_row','db_ohp','lat_pulldown','bicep_curl','tricep_pushdown'],
-    defaultSets:3,emoji:'🟡',
-    description:'Balanced upper body session'
+    id:'legs_b',name:'Leg Day B',tags:['Legs','Hamstrings','Glutes'],
+    exercises:['sumo_deadlift','hip_thrust','bulgarian_split','seated_leg_curl','leg_extension','seated_calf'],
+    defaultSets:4,emoji:'🟢',
+    description:'Hamstring & glute-focused lower body'
+  },
+  // ── BODY PART SPLITS ──
+  {
+    id:'chest_day',name:'Chest Day',tags:['Chest'],
+    exercises:['bench_press','incline_bench','incline_db_press','chest_fly','cable_crossover','dips'],
+    defaultSets:4,emoji:'💪',
+    description:'Full chest session — upper, mid & lower'
   },
   {
-    id:'full_body',name:'Full Body',tags:['Full Body'],
+    id:'back_day',name:'Back Day',tags:['Back'],
+    exercises:['deadlift','pullup','barbell_row','lat_pulldown','seated_row','face_pull'],
+    defaultSets:4,emoji:'🔙',
+    description:'Full back session — width & thickness'
+  },
+  {
+    id:'shoulder_day',name:'Shoulder Day',tags:['Shoulders'],
+    exercises:['ohp','db_ohp','lateral_raise','front_raise','rear_delt_fly','shrugs'],
+    defaultSets:4,emoji:'🏔️',
+    description:'All three deltoid heads + traps'
+  },
+  {
+    id:'arm_day',name:'Arm Day',tags:['Arms','Biceps','Triceps'],
+    exercises:['bicep_curl','skull_crusher','hammer_curl','tricep_pushdown','preacher_curl','overhead_tricep'],
+    defaultSets:4,emoji:'💪',
+    description:'Biceps & triceps superset style'
+  },
+  {
+    id:'bicep_day',name:'Bicep Day',tags:['Arms','Biceps'],
+    exercises:['bicep_curl','hammer_curl','preacher_curl','cable_curl','concentration_curl','incline_curl'],
+    defaultSets:4,emoji:'💪',
+    description:'Full bicep isolation session'
+  },
+  {
+    id:'tricep_day',name:'Tricep Day',tags:['Arms','Triceps'],
+    exercises:['close_grip_bench','skull_crusher','tricep_pushdown','rope_pushdown','overhead_tricep','tricep_kickback'],
+    defaultSets:4,emoji:'🔱',
+    description:'Full tricep isolation session'
+  },
+  {
+    id:'leg_quad',name:'Quad Focus',tags:['Legs','Quads'],
+    exercises:['squat','front_squat','leg_press','leg_extension','hack_squat','calf_raise'],
+    defaultSets:4,emoji:'🦵',
+    description:'Quad-dominant leg session'
+  },
+  {
+    id:'leg_ham',name:'Hamstring & Glute Focus',tags:['Legs','Hamstrings','Glutes'],
+    exercises:['rdl','hip_thrust','bulgarian_split','seated_leg_curl','glute_bridge','step_up'],
+    defaultSets:4,emoji:'🍑',
+    description:'Posterior chain specialisation'
+  },
+  {
+    id:'core_day',name:'Core Day',tags:['Core'],
+    exercises:['plank','hanging_leg_raise','cable_crunch','russian_twist','ab_wheel','bicycle_crunch'],
+    defaultSets:3,emoji:'⚡',
+    description:'Full core — abs, obliques & lower abs'
+  },
+  // ── UPPER / LOWER ──
+  {
+    id:'upper_a',name:'Upper A — Strength',tags:['Upper','Chest','Back','Shoulders'],
+    exercises:['bench_press','barbell_row','ohp','lat_pulldown','bicep_curl','tricep_pushdown'],
+    defaultSets:4,emoji:'🟡',
+    description:'Upper body — heavy compound focus'
+  },
+  {
+    id:'upper_b',name:'Upper B — Hypertrophy',tags:['Upper','Chest','Back','Arms'],
+    exercises:['incline_db_press','db_row','lateral_raise','cable_crossover','hammer_curl','skull_crusher'],
+    defaultSets:4,emoji:'🟡',
+    description:'Upper body — volume & isolation focus'
+  },
+  {
+    id:'lower_a',name:'Lower A — Strength',tags:['Legs','Lower'],
+    exercises:['squat','rdl','leg_press','leg_curl','calf_raise','plank'],
+    defaultSets:4,emoji:'🟠',
+    description:'Lower body — squat & deadlift pattern'
+  },
+  {
+    id:'lower_b',name:'Lower B — Hypertrophy',tags:['Legs','Lower','Glutes'],
+    exercises:['hip_thrust','bulgarian_split','leg_extension','seated_leg_curl','lunges','seated_calf'],
+    defaultSets:4,emoji:'🟠',
+    description:'Lower body — volume & glute focus'
+  },
+  // ── FULL BODY ──
+  {
+    id:'full_body_a',name:'Full Body A',tags:['Full Body'],
     exercises:['squat','bench_press','barbell_row','ohp','deadlift','plank'],
     defaultSets:3,emoji:'⚪',
-    description:'Hit everything in one session'
+    description:'Hit every major muscle in one session'
   },
+  {
+    id:'full_body_b',name:'Full Body B',tags:['Full Body'],
+    exercises:['front_squat','incline_db_press','pullup','db_ohp','rdl','ab_wheel'],
+    defaultSets:3,emoji:'⚪',
+    description:'Full body variation — different movement patterns'
+  },
+  {
+    id:'full_body_c',name:'Full Body C',tags:['Full Body'],
+    exercises:['leg_press','dips','lat_pulldown','lateral_raise','leg_curl','bicycle_crunch'],
+    defaultSets:3,emoji:'⚪',
+    description:'Full body — machine & isolation friendly'
+  },
+  // ── SPECIALITY ──
   {
     id:'bodyweight',name:'Bodyweight Circuit',tags:['Bodyweight','Home'],
     exercises:['pushup','pullup','lunges','dips','crunch','plank'],
     defaultSets:3,emoji:'🤸',
     description:'No equipment needed'
+  },
+  {
+    id:'bodyweight_adv',name:'Bodyweight Advanced',tags:['Bodyweight','Home'],
+    exercises:['diamond_pushup','pullup','bulgarian_split','dips','hanging_leg_raise','ab_wheel'],
+    defaultSets:4,emoji:'🤸',
+    description:'Advanced calisthenics session'
+  },
+  {
+    id:'strength',name:'Powerlifting Day',tags:['Strength','Full Body'],
+    exercises:['squat','bench_press','deadlift','ohp','barbell_row'],
+    defaultSets:5,emoji:'🏋️',
+    description:'The big 5 — pure strength focus'
+  },
+  {
+    id:'back_bis',name:'Back & Biceps',tags:['Pull','Back','Biceps'],
+    exercises:['pullup','barbell_row','lat_pulldown','seated_row','bicep_curl','hammer_curl'],
+    defaultSets:4,emoji:'🔵',
+    description:'Classic bro split — back & biceps'
+  },
+  {
+    id:'chest_tris',name:'Chest & Triceps',tags:['Push','Chest','Triceps'],
+    exercises:['bench_press','incline_db_press','chest_fly','dips','tricep_pushdown','skull_crusher'],
+    defaultSets:4,emoji:'🔴',
+    description:'Classic bro split — chest & triceps'
+  },
+  {
+    id:'shoulders_arms',name:'Shoulders & Arms',tags:['Shoulders','Arms'],
+    exercises:['ohp','lateral_raise','rear_delt_fly','bicep_curl','tricep_pushdown','hammer_curl'],
+    defaultSets:4,emoji:'🏔️',
+    description:'Shoulders, biceps & triceps together'
   },
 ];
 
@@ -2355,7 +2492,7 @@ function renderWorkouts() {
   // Filters
   const filters = document.getElementById('workout-filters');
   filters.innerHTML = '';
-  const cats = ['All','Push','Pull','Legs','Upper','Full Body','Bodyweight','Custom'];
+  const cats = ['All','Push','Pull','Legs','Chest','Back','Shoulders','Arms','Core','Upper','Full Body','Bodyweight','Strength','Custom'];
   cats.forEach(cat => {
     const chip = document.createElement('div');
     chip.className = 'filter-chip' + (cat === activeFilter ? ' active' : '');
