@@ -1269,6 +1269,12 @@ canvas { display: block; }
   font-weight: 600;
 }
 
+@keyframes levelup-bounce {
+  0%   { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.2) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
 /* ====== TOAST ====== */
 #toast {
   position: fixed;
@@ -1556,13 +1562,17 @@ canvas { display: block; }
     <div class="screen" id="screen-nutrition">
       <div class="screen-header" style="padding-top: calc(var(--safe-top) + 16px)">
         <div class="screen-title">Nutrition</div>
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)" id="nutrition-date"></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn-icon" onclick="shiftNutritionDay(-1)" style="padding:6px 10px;font-size:16px">‹</button>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-width:80px;text-align:center" id="nutrition-date"></div>
+          <button class="btn-icon" id="nutrition-next-btn" onclick="shiftNutritionDay(1)" style="padding:6px 10px;font-size:16px">›</button>
+        </div>
       </div>
       <div class="screen-body scroll-area" style="padding-bottom:24px">
         <div class="macro-ring-section fade-up" id="macro-ring-section"></div>
-        <div class="section-title fade-up fade-up-d1">Today's Meals</div>
+        <div class="section-title fade-up fade-up-d1" id="nutrition-day-title">Today's Meals</div>
         <div id="meals-list" class="fade-up fade-up-d2"></div>
-        <button class="add-meal-btn fade-up fade-up-d3" onclick="openAddMeal()" style="margin-bottom:16px">＋ Log Meal</button>
+        <button class="add-meal-btn fade-up fade-up-d3" id="nutrition-log-btn" onclick="openAddMeal()" style="margin-bottom:16px">＋ Log Meal</button>
       </div>
     </div>
 
@@ -1724,11 +1734,24 @@ canvas { display: block; }
 
 <!-- ====== WORKOUT COMPLETE MODAL ====== -->
 <div id="complete-modal" class="hidden">
-  <div class="complete-emoji">🎉</div>
-  <div class="complete-title">WORKOUT<br>COMPLETE!</div>
+  <div class="complete-emoji" id="complete-emoji">🎉</div>
+  <div class="complete-title" id="complete-title">WORKOUT<br>COMPLETE!</div>
   <div class="complete-sub" id="complete-sub">Amazing work. Keep it up!</div>
   <div class="complete-stats" id="complete-stats"></div>
   <button class="btn-primary" style="max-width:320px;width:100%" onclick="closeCompleteModal()">Done</button>
+</div>
+
+<!-- ====== LEVEL UP MODAL ====== -->
+<div id="levelup-modal" class="hidden" style="position:fixed;inset:0;background:var(--bg);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center">
+  <div style="font-size:80px;margin-bottom:16px;animation:levelup-bounce 0.6s ease" id="levelup-emoji">⚡</div>
+  <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">LEVEL UP!</div>
+  <div style="font-family:var(--font-display);font-size:64px;font-weight:900;color:var(--accent);line-height:1;letter-spacing:-2px;margin-bottom:8px" id="levelup-name">VETERAN</div>
+  <div style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--text-muted);margin-bottom:32px" id="levelup-desc"></div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 32px;margin-bottom:32px">
+    <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:4px">Total XP</div>
+    <div style="font-family:var(--font-display);font-size:40px;font-weight:900;color:var(--accent)" id="levelup-xp">0</div>
+  </div>
+  <button class="btn-primary pulse" style="max-width:280px;width:100%" onclick="closeLevelUp()">Let's Go! ⚡</button>
 </div>
 
 <!-- ====== MODAL: Add Exercise ====== -->
@@ -3131,9 +3154,16 @@ function finishWorkout() {
     APP.lastWorkoutDate = today;
   }
 
+  const levelBefore = getLevel(APP.xp);
   APP.xp += xpGained;
+  const levelAfter = getLevel(APP.xp);
   saveData();
   showCompleteModal(record, elapsed);
+
+  // Show level up celebration after a short delay if levelled up
+  if (levelAfter > levelBefore) {
+    setTimeout(() => showLevelUp(levelAfter), 2200);
+  }
 
   clearActiveWorkout();
   activeWorkout = null;
@@ -3189,9 +3219,45 @@ function closeCompleteModal() {
   showScreen('home');
 }
 
-// ============================================================
-// REST TIMER
-// ============================================================
+const LEVEL_EMOJIS  = ['🌱','🏃','⚡','🦁','🏆','👑'];
+const LEVEL_DESCS   = [
+  'You\'re just getting started.',
+  'The grind is real.',
+  'Halfway to greatness.',
+  'Serious lifter status.',
+  'You\'re an elite athlete.',
+  'Nothing can stop you.'
+];
+
+function showLevelUp(lvl) {
+  // Close complete modal first if still open
+  document.getElementById('complete-modal').classList.add('hidden');
+
+  const modal = document.getElementById('levelup-modal');
+  document.getElementById('levelup-emoji').textContent  = LEVEL_EMOJIS[lvl] || '⚡';
+  document.getElementById('levelup-name').textContent   = LEVEL_NAMES[lvl]  || 'LEGEND';
+  document.getElementById('levelup-desc').textContent   = LEVEL_DESCS[lvl]  || 'You\'ve reached the top.';
+  document.getElementById('levelup-xp').textContent     = APP.xp + ' XP';
+
+  modal.classList.remove('hidden');
+
+  // Re-trigger emoji animation
+  const emojiEl = document.getElementById('levelup-emoji');
+  emojiEl.style.animation = 'none';
+  emojiEl.offsetHeight; // force reflow
+  emojiEl.style.animation = '';
+
+  vibrate([100, 50, 100, 50, 300]);
+}
+
+function closeLevelUp() {
+  document.getElementById('levelup-modal').classList.add('hidden');
+  renderHome();
+  renderProgress();
+  showScreen('home');
+}
+
+
 
 function startRestTimer(duration) {
   stopRestTimer();
@@ -3548,6 +3614,13 @@ function renderHistory(page) {
   pageItems.forEach(h => {
     const card = document.createElement('div');
     card.className = 'card';
+
+    const topRow = document.createElement('div');
+    topRow.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:8px';
+
+    const info = document.createElement('div');
+    info.style.flex = '1';
+
     const title = document.createElement('div');
     title.className = 'card-title';
     title.textContent = (h.emoji||'🏋️') + ' ' + h.name;
@@ -3563,9 +3636,20 @@ function renderHistory(page) {
     xpBadge.className = 'card-badge';
     xpBadge.style.marginTop = '8px';
     xpBadge.textContent = '+' + (h.xpGained||0) + ' XP';
-    card.appendChild(title);
-    card.appendChild(sub);
-    card.appendChild(xpBadge);
+
+    info.appendChild(title);
+    info.appendChild(sub);
+    info.appendChild(xpBadge);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-icon btn-danger';
+    delBtn.style.cssText = 'padding:6px 10px;font-size:12px;flex-shrink:0;margin-top:2px';
+    delBtn.textContent = '🗑️';
+    delBtn.onclick = () => deleteHistoryEntry(h.id);
+
+    topRow.appendChild(info);
+    topRow.appendChild(delBtn);
+    card.appendChild(topRow);
     el.appendChild(card);
   });
 
@@ -3580,13 +3664,101 @@ function renderHistory(page) {
   }
 }
 
-// ============================================================
-// NUTRITION SCREEN
-// ============================================================
+function deleteHistoryEntry(id) {
+  if (!confirm('Delete this workout from history? XP will be refunded.')) return;
+
+  const idx = APP.history.findIndex(h => h.id === id);
+  if (idx === -1) return;
+
+  const entry = APP.history[idx];
+
+  // Refund XP
+  APP.xp = Math.max(0, APP.xp - (entry.xpGained || 0));
+
+  // Remove entry
+  APP.history.splice(idx, 1);
+
+  // Rebuild PRs from scratch from remaining history
+  APP.prs = {};
+  APP.history.forEach(h => {
+    (h.exercises || []).forEach(ex => {
+      if (ex.type === 'cardio') {
+        (ex.sets || []).forEach(set => {
+          const km = set.distance || 0;
+          const dur = set.duration || '';
+          let mins = 0;
+          if (typeof dur === 'string' && dur.includes(':')) {
+            const p = dur.split(':');
+            mins = (parseInt(p[0])||0) + (parseInt(p[1])||0)/60;
+          } else { mins = parseFloat(dur)||0; }
+          if (!APP.prs[ex.id]) APP.prs[ex.id] = { name: ex.name, type: 'cardio', bestKm: 0, bestMins: 0, date: h.date };
+          if (km > (APP.prs[ex.id].bestKm||0)) { APP.prs[ex.id].bestKm = km; APP.prs[ex.id].date = h.date; }
+          if (mins > (APP.prs[ex.id].bestMins||0)) { APP.prs[ex.id].bestMins = mins; }
+        });
+      } else {
+        (ex.sets || []).forEach(set => {
+          if (set.weight > 0 && set.reps > 0) {
+            const e1rm = set.weight * (1 + set.reps / 30);
+            if (!APP.prs[ex.id] || e1rm > APP.prs[ex.id].e1rm) {
+              APP.prs[ex.id] = { weight: set.weight, reps: set.reps, e1rm, date: h.date, name: ex.name, type: 'strength' };
+            }
+          }
+        });
+      }
+    });
+  });
+
+  // Recalculate streak last workout date
+  if (APP.history.length > 0) {
+    const latestDate = APP.history.reduce((latest, h) => h.date > latest ? h.date : latest, '');
+    APP.lastWorkoutDate = latestDate;
+  } else {
+    APP.lastWorkoutDate = null;
+    APP.streak = 0;
+  }
+
+  saveData();
+  renderHistory(1);
+  renderProgress();
+  renderHome();
+  showToast('Workout deleted & XP refunded', 'success');
+}
+
+
+
+function shiftNutritionDay(delta) {
+  const d = new Date(_nutritionDate);
+  d.setDate(d.getDate() + delta);
+  const today = dateStr(new Date());
+  const shifted = dateStr(d);
+  // Don't go into the future
+  if (shifted > today) return;
+  _nutritionDate = shifted;
+  renderNutrition();
+}
 
 function renderNutrition() {
   const today = dateStr(new Date());
-  document.getElementById('nutrition-date').textContent = today;
+  // Reset to today when screen is freshly opened from nav
+  // but preserve date if we're navigating days
+  const isToday = _nutritionDate === today;
+  const isPast = _nutritionDate < today;
+
+  // Update date display
+  const dateEl = document.getElementById('nutrition-date');
+  if (dateEl) dateEl.textContent = isToday ? 'Today' : _nutritionDate;
+
+  // Update day title
+  const titleEl = document.getElementById('nutrition-day-title');
+  if (titleEl) titleEl.textContent = isToday ? "Today's Meals" : _nutritionDate + ' Meals';
+
+  // Hide "next" button if already on today
+  const nextBtn = document.getElementById('nutrition-next-btn');
+  if (nextBtn) nextBtn.style.opacity = isToday ? '0.3' : '1';
+
+  // Hide log button for past days (can't log to past)
+  const logBtn = document.getElementById('nutrition-log-btn');
+  if (logBtn) logBtn.style.display = isPast ? 'none' : '';
 
   const meals = getTodayMeals();
   const totals = calcMealTotals(meals);
@@ -3694,8 +3866,7 @@ function renderNutrition() {
 }
 
 function getTodayMeals() {
-  const today = dateStr(new Date());
-  return APP.nutrition.days[today] || [];
+  return APP.nutrition.days[_nutritionDate] || [];
 }
 
 function calcMealTotals(meals) {
@@ -4185,9 +4356,8 @@ function logMeal() { logMealManual(); }
 
 
 function deleteMeal(idx) {
-  const today = dateStr(new Date());
-  if (APP.nutrition.days[today]) {
-    APP.nutrition.days[today].splice(idx, 1);
+  if (APP.nutrition.days[_nutritionDate]) {
+    APP.nutrition.days[_nutritionDate].splice(idx, 1);
     saveData();
     renderNutrition();
   }
@@ -4539,7 +4709,7 @@ function showScreen(name) {
   // Refresh screen on visit
   if (name === 'home') renderHome();
   if (name === 'progress') { renderProgress(); }
-  if (name === 'nutrition') renderNutrition();
+  if (name === 'nutrition') { _nutritionDate = dateStr(new Date()); renderNutrition(); }
   if (name === 'profile') renderProfile();
   if (name === 'workouts') renderWorkouts();
 }
