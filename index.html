@@ -1553,8 +1553,10 @@ canvas { display: block; }
         </div>
         <div class="section-title fade-up fade-up-d3">Personal Records</div>
         <div class="profile-section fade-up fade-up-d3" id="pr-list" style="margin-bottom:16px"></div>
-        <div class="section-title fade-up fade-up-d3">History</div>
+        <div class="section-title fade-up fade-up-d3">Workout History</div>
         <div id="history-list" class="fade-up" style="padding-bottom:16px"></div>
+        <div class="section-title fade-up fade-up-d3">XP History</div>
+        <div id="xp-log-list" class="fade-up" style="padding-bottom:16px"></div>
       </div>
     </div>
 
@@ -2158,8 +2160,72 @@ const WORKOUT_TEMPLATES = [
 
 const MUSCLES = ['All','Chest','Back','Shoulders','Arms','Legs','Core','Cardio'];
 
-const LEVEL_NAMES = ['Rookie','Amateur','Intermediate','Veteran','Elite','Legend'];
-const LEVEL_XP = [500,1200,2500,5000,9000,Infinity];
+// ============================================================
+// 100-LEVEL XP SYSTEM
+// Tiers of 10: Rookie(1-10), Novice(11-20), Amateur(21-30),
+// Athlete(31-40), Veteran(41-50), Pro(51-60), Elite(61-70),
+// Champion(71-80), Master(81-90), Legend(91-100)
+// ============================================================
+const TIER_NAMES = ['Rookie','Novice','Amateur','Athlete','Veteran','Pro','Elite','Champion','Master','Legend'];
+const TIER_EMOJIS = ['🌱','🏃','💪','⚡','🔥','🎯','🦁','🏆','👊','👑'];
+const TIER_DESCS = [
+  'Just getting started.',
+  'Building the habit.',
+  'Real strength forming.',
+  'Consistent and dedicated.',
+  'Years of hard work.',
+  'Serious competitor.',
+  'Top 1% dedication.',
+  'Podium material.',
+  'Near-perfect discipline.',
+  'Truly untouchable.'
+];
+
+// XP required per level (index 0 = level 1→2, index 99 = level 100 cap)
+// Curve: 150/level for 1-10, 300 for 11-20, 600 for 21-30,
+//        1200 for 31-40, 2000 for 41-50, 2500 for 51-60,
+//        3000 for 61-70, 3500 for 71-80, 4000 for 81-90, 5000 for 91-100
+const XP_PER_LEVEL = (function() {
+  const arr = [];
+  const costs = [150,300,600,1200,2000,2500,3000,3500,4000,5000];
+  for (let tier = 0; tier < 10; tier++) {
+    for (let i = 0; i < 10; i++) arr.push(costs[tier]);
+  }
+  return arr; // arr[i] = XP needed to go from level (i+1) to (i+2)
+})();
+
+// Cumulative XP thresholds: XP_THRESHOLDS[i] = total XP needed to reach level (i+1)
+const XP_THRESHOLDS = (function() {
+  const t = [0];
+  for (let i = 0; i < 99; i++) t.push(t[i] + XP_PER_LEVEL[i]);
+  return t; // t[0]=0 (level 1), t[99]=total for level 100
+})();
+
+function getLevel(xp) {
+  // Returns 0-based level index (0 = level 1, 99 = level 100)
+  let lvl = 0;
+  for (let i = 0; i < 100; i++) {
+    if (xp >= XP_THRESHOLDS[i]) lvl = i;
+    else break;
+  }
+  return Math.min(lvl, 99);
+}
+
+function getLevelProgress(xp) {
+  const lvl = getLevel(xp);                          // 0-based, 0–99
+  const displayLvl = lvl + 1;                        // 1-based, 1–100
+  const tierIdx = Math.floor(lvl / 10);              // 0–9
+  const tierName = TIER_NAMES[tierIdx];
+  const prevXP = XP_THRESHOLDS[lvl];
+  const nextXP = lvl < 99 ? XP_THRESHOLDS[lvl + 1] : XP_THRESHOLDS[99] + XP_PER_LEVEL[99];
+  const pct = lvl < 99 ? ((xp - prevXP) / (nextXP - prevXP)) * 100 : 100;
+  return { lvl, displayLvl, tierIdx, tierName, tierEmoji: TIER_EMOJIS[tierIdx], prev: prevXP, next: nextXP, pct };
+}
+
+// Legacy aliases (level-up modal uses index directly)
+const LEVEL_NAMES  = TIER_NAMES;
+const LEVEL_EMOJIS = TIER_EMOJIS;
+const LEVEL_DESCS  = TIER_DESCS;
 
 // ============================================================
 // STORAGE
@@ -2202,6 +2268,7 @@ let APP = {
   history: [],
   nutrition: { goals: { calories:2500, protein:170, carbs:300, fat:80 }, days: {} },
   xp: 0,
+  xpLog: [], // { date, amount, reason, total }
   streak: 0,
   lastWorkoutDate: null,
   customWorkouts: [],
@@ -2389,7 +2456,7 @@ function getLevelProgress(xp) {
   const lvl = getLevel(xp);
   const prevXP = lvl === 0 ? 0 : LEVEL_XP[lvl - 1];
   const nextXP = LEVEL_XP[lvl];
-  return { lvl, name: LEVEL_NAMES[lvl], prev: prevXP, next: nextXP, pct: ((xp - prevXP) / (nextXP - prevXP)) * 100 };
+  return { lvl, displayLvl, tierIdx, tierName, tierEmoji: TIER_EMOJIS[tierIdx], prev: prevXP, next: nextXP, pct };
 }
 
 // ============================================================
@@ -2406,8 +2473,8 @@ function renderHome() {
   setTextContent('home-xp', APP.xp);
 
   const lp = getLevelProgress(APP.xp);
-  setTextContent('home-level', `LVL ${lp.lvl + 1} — ${lp.name}`);
-  setTextContent('home-xp-to', `${APP.xp} / ${lp.next} XP`);
+  setTextContent('home-level', `LVL ${lp.displayLvl} — ${lp.tierName}`);
+  setTextContent('home-xp-to', `${APP.xp.toLocaleString()} / ${lp.next.toLocaleString()} XP`);
   document.getElementById('home-xp-bar').style.width = Math.min(lp.pct, 100) + '%';
 
   // Today's workout (first scheduled or first template)
@@ -3157,12 +3224,26 @@ function finishWorkout() {
   const levelBefore = getLevel(APP.xp);
   APP.xp += xpGained;
   const levelAfter = getLevel(APP.xp);
+
+  // Log XP entry
+  if (!APP.xpLog) APP.xpLog = [];
+  APP.xpLog.push({
+    date: dateStr(new Date()),
+    amount: xpGained,
+    reason: record.name,
+    emoji: record.emoji || '🏋️',
+    total: APP.xp
+  });
+  // Keep only last 200 XP log entries
+  if (APP.xpLog.length > 200) APP.xpLog = APP.xpLog.slice(-200);
+
   saveData();
   showCompleteModal(record, elapsed);
 
-  // Show level up celebration after a short delay if levelled up
+  // Level up: compare tier (every 10 levels) for celebration
   if (levelAfter > levelBefore) {
-    setTimeout(() => showLevelUp(levelAfter), 2200);
+    const tierAfter = Math.floor(levelAfter / 10);
+    setTimeout(() => showLevelUp(levelAfter, tierAfter), 2200);
   }
 
   clearActiveWorkout();
@@ -3219,32 +3300,22 @@ function closeCompleteModal() {
   showScreen('home');
 }
 
-const LEVEL_EMOJIS  = ['🌱','🏃','⚡','🦁','🏆','👑'];
-const LEVEL_DESCS   = [
-  'You\'re just getting started.',
-  'The grind is real.',
-  'Halfway to greatness.',
-  'Serious lifter status.',
-  'You\'re an elite athlete.',
-  'Nothing can stop you.'
-];
 
-function showLevelUp(lvl) {
-  // Close complete modal first if still open
+function showLevelUp(lvlIdx, tierIdx) {
   document.getElementById('complete-modal').classList.add('hidden');
 
   const modal = document.getElementById('levelup-modal');
-  document.getElementById('levelup-emoji').textContent  = LEVEL_EMOJIS[lvl] || '⚡';
-  document.getElementById('levelup-name').textContent   = LEVEL_NAMES[lvl]  || 'LEGEND';
-  document.getElementById('levelup-desc').textContent   = LEVEL_DESCS[lvl]  || 'You\'ve reached the top.';
-  document.getElementById('levelup-xp').textContent     = APP.xp + ' XP';
+  const tier = Math.min(tierIdx !== undefined ? tierIdx : Math.floor(lvlIdx/10), 9);
+  document.getElementById('levelup-emoji').textContent = TIER_EMOJIS[tier] || '⚡';
+  document.getElementById('levelup-name').textContent  = 'LEVEL ' + (lvlIdx + 1) + ' — ' + TIER_NAMES[tier];
+  document.getElementById('levelup-desc').textContent  = TIER_DESCS[tier] || '';
+  document.getElementById('levelup-xp').textContent    = APP.xp.toLocaleString() + ' XP';
 
   modal.classList.remove('hidden');
 
-  // Re-trigger emoji animation
   const emojiEl = document.getElementById('levelup-emoji');
   emojiEl.style.animation = 'none';
-  emojiEl.offsetHeight; // force reflow
+  emojiEl.offsetHeight;
   emojiEl.style.animation = '';
 
   vibrate([100, 50, 100, 50, 300]);
@@ -3419,6 +3490,7 @@ function renderProgress() {
   drawFreqChart();
   renderPRs();
   renderHistory();
+  renderXPLog();
 }
 
 function getLast7Days() {
@@ -3664,6 +3736,102 @@ function renderHistory(page) {
   }
 }
 
+let _xpLogPage = 1;
+const XP_LOG_PAGE_SIZE = 30;
+
+function renderXPLog(page) {
+  page = page || 1;
+  _xpLogPage = page;
+  const el = document.getElementById('xp-log-list');
+  if (page === 1) el.innerHTML = '';
+
+  const log = [...(APP.xpLog || [])].reverse(); // newest first
+
+  if (log.length === 0) {
+    el.innerHTML = `<div class="empty-state" style="padding:30px">
+      <div class="empty-icon">⚡</div>
+      <div class="empty-title">No XP yet</div>
+      <div class="empty-sub">Complete a workout to earn XP</div>
+    </div>`;
+    return;
+  }
+
+  const oldLoadMore = document.getElementById('xp-log-load-more');
+  if (oldLoadMore) oldLoadMore.remove();
+
+  const items = log.slice(0, page * XP_LOG_PAGE_SIZE);
+
+  // Group by date
+  const groups = {};
+  items.forEach(entry => {
+    if (!groups[entry.date]) groups[entry.date] = [];
+    groups[entry.date].push(entry);
+  });
+
+  // Render grouped by date
+  Object.entries(groups).forEach(([date, entries]) => {
+    // Date header
+    const header = document.createElement('div');
+    header.style.cssText = 'font-family:var(--font-mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);padding:10px 2px 6px';
+    const today = dateStr(new Date());
+    const yesterday = dateStr(new Date(Date.now() - 86400000));
+    header.textContent = date === today ? 'Today' : date === yesterday ? 'Yesterday' : date;
+    el.appendChild(header);
+
+    // Daily XP total
+    const dayTotal = entries.reduce((s, e) => s + e.amount, 0);
+
+    entries.forEach(entry => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)';
+
+      // Emoji
+      const icon = document.createElement('div');
+      icon.style.cssText = 'font-size:20px;flex-shrink:0;width:32px;text-align:center';
+      icon.textContent = entry.emoji || '🏋️';
+
+      // Info
+      const info = document.createElement('div');
+      info.style.cssText = 'flex:1;min-width:0';
+      const name = document.createElement('div');
+      name.style.cssText = 'font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+      name.textContent = entry.reason || 'Workout';
+      const sub = document.createElement('div');
+      sub.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:var(--text-dim);margin-top:2px';
+      sub.textContent = 'Total after: ' + (entry.total || 0).toLocaleString() + ' XP';
+      info.appendChild(name);
+      info.appendChild(sub);
+
+      // XP amount
+      const xpEl = document.createElement('div');
+      xpEl.style.cssText = 'font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--accent);flex-shrink:0';
+      xpEl.textContent = '+' + entry.amount;
+
+      row.appendChild(icon);
+      row.appendChild(info);
+      row.appendChild(xpEl);
+      el.appendChild(row);
+    });
+
+    // Day total footer
+    const dayRow = document.createElement('div');
+    dayRow.style.cssText = 'display:flex;justify-content:flex-end;padding:6px 0 10px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted)';
+    dayRow.textContent = 'Day total: +' + dayTotal + ' XP';
+    el.appendChild(dayRow);
+  });
+
+  // Load more button
+  if (items.length < log.length) {
+    const btn = document.createElement('button');
+    btn.id = 'xp-log-load-more';
+    btn.className = 'add-meal-btn';
+    btn.style.marginBottom = '16px';
+    btn.textContent = `Load more (${log.length - items.length} remaining)`;
+    btn.onclick = () => renderXPLog(_xpLogPage + 1);
+    el.appendChild(btn);
+  }
+}
+
 function deleteHistoryEntry(id) {
   if (!confirm('Delete this workout from history? XP will be refunded.')) return;
 
@@ -3672,8 +3840,13 @@ function deleteHistoryEntry(id) {
 
   const entry = APP.history[idx];
 
-  // Refund XP
+  // Refund XP and remove log entry
   APP.xp = Math.max(0, APP.xp - (entry.xpGained || 0));
+  if (APP.xpLog) {
+    // Remove the matching log entry (match by date and amount)
+    const logIdx = APP.xpLog.findIndex(l => l.date === entry.date && l.amount === entry.xpGained && l.reason === entry.name);
+    if (logIdx !== -1) APP.xpLog.splice(logIdx, 1);
+  }
 
   // Remove entry
   APP.history.splice(idx, 1);
@@ -4502,7 +4675,7 @@ User profile:
 function renderProfile() {
   const lp = getLevelProgress(APP.xp);
   setTextContent('profile-name', APP.profile.name || 'Athlete');
-  setTextContent('profile-level-tag', `Level ${lp.lvl+1} · ${lp.name}`);
+  setTextContent('profile-level-tag', `Level ${lp.displayLvl} · ${lp.tierName}`);
 
   const apiKeyEl = document.getElementById('api-key-status');
   if (apiKeyEl) {
@@ -4768,6 +4941,7 @@ function boot() {
       APP.profile = { ...APP.profile, ...(saved.profile||{}) };
       APP.settings = { ...APP.settings, ...(saved.settings||{}) };
       APP.nutrition = { ...APP.nutrition, ...(saved.nutrition||{}) };
+      if (!APP.xpLog) APP.xpLog = [];
       // Merge in any new templates added in code updates that user doesn't have yet
       const savedIds = new Set((APP.workouts||[]).map(w => w.id));
       const newTemplates = WORKOUT_TEMPLATES.filter(t => !savedIds.has(t.id)).map(t => ({...t, isTemplate:true}));
