@@ -1492,21 +1492,21 @@ canvas { display: block; }
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
             <div class="stat-lbl" id="home-level">LVL 1 — Rookie</div>
-            <div class="stat-lbl" id="home-xp-to">0 / 500 XP</div>
+            <div class="stat-lbl" id="home-xp-to"></div>
           </div>
           <div class="xp-bar-wrap">
             <div class="xp-bar-fill" id="home-xp-bar" style="width:0%"></div>
           </div>
         </div>
 
-        <div class="section-title fade-up fade-up-d1">
+        <div class="section-title">
           Today's Plan
           <span class="section-link" onclick="showScreen('workouts')">All →</span>
         </div>
-        <div id="home-today-workout" class="fade-up fade-up-d2"></div>
+        <div id="home-today-workout"></div>
 
-        <div class="section-title fade-up fade-up-d3">Quick Start</div>
-        <div id="home-quick" class="fade-up fade-up-d4" style="padding-bottom: 16px"></div>
+        <div class="section-title">Quick Start</div>
+        <div id="home-quick" style="padding-bottom: 16px"></div>
       </div>
     </div>
 
@@ -1573,10 +1573,10 @@ canvas { display: block; }
         </div>
       </div>
       <div class="screen-body scroll-area" style="padding-bottom:24px">
-        <div class="macro-ring-section fade-up" id="macro-ring-section"></div>
-        <div class="section-title fade-up fade-up-d1" id="nutrition-day-title">Today's Meals</div>
-        <div id="meals-list" class="fade-up fade-up-d2"></div>
-        <button class="add-meal-btn fade-up fade-up-d3" id="nutrition-log-btn" onclick="openAddMeal()" style="margin-bottom:16px">＋ Log Meal</button>
+        <div class="macro-ring-section" id="macro-ring-section"></div>
+        <div class="section-title" id="nutrition-day-title">Today's Meals</div>
+        <div id="meals-list"></div>
+        <button class="add-meal-btn" id="nutrition-log-btn" onclick="openAddMeal()" style="margin-bottom:16px">＋ Log Meal</button>
       </div>
     </div>
 
@@ -4943,6 +4943,7 @@ function boot() {
       APP.profile = { ...APP.profile, ...(saved.profile||{}) };
       APP.settings = { ...APP.settings, ...(saved.settings||{}) };
       APP.nutrition = { ...APP.nutrition, ...(saved.nutrition||{}) };
+      APP.xp = parseInt(APP.xp) || 0;  // ensure xp is always a number
       if (!APP.xpLog) APP.xpLog = [];
       // Merge in any new templates added in code updates that user doesn't have yet
       const savedIds = new Set((APP.workouts||[]).map(w => w.id));
