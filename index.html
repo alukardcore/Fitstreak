@@ -273,6 +273,7 @@ body {
   padding-bottom: calc(var(--nav-h) + var(--safe-bottom));
   opacity: 0; visibility: hidden;
   transition: opacity 0.25s ease;
+  overflow: hidden;
 }
 .screen.active { opacity: 1; visibility: visible; }
 
@@ -810,6 +811,7 @@ canvas { display: block; }
   padding: 20px;
   margin-bottom: 16px;
   display: flex; align-items: center; gap: 20px;
+  min-height: 130px;
 }
 .macro-ring-wrap { position: relative; flex-shrink: 0; }
 .macro-ring-svg { transform: rotate(-90deg); }
@@ -2416,6 +2418,10 @@ function finishOnboarding() {
 // ============================================================
 
 function initApp() {
+  // Ensure workouts are always populated — covers fresh installs and data resets
+  if (!APP.workouts || APP.workouts.length === 0) {
+    APP.workouts = WORKOUT_TEMPLATES.map(t => ({...t, isTemplate:true}));
+  }
   updateStreak();
   renderHome();
   renderWorkouts();
