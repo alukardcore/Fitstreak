@@ -68,6 +68,7 @@ body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   scrollbar-width: none;
+  height: 100%;
 }
 .scroll-area::-webkit-scrollbar { display: none; }
 
@@ -273,6 +274,7 @@ body {
   padding-bottom: calc(var(--nav-h) + var(--safe-bottom));
   opacity: 0; visibility: hidden;
   transition: opacity 0.25s ease;
+  overflow: hidden;
 }
 .screen.active { opacity: 1; visibility: visible; }
 
