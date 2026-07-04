@@ -159,7 +159,8 @@ let APP = {
   settings:{weightUnit:'kg',restTimerOn:true,restDuration:90,apiKey:'',activityLevel:1.55},
   workouts:[], customWorkouts:[], history:[], prs:{},
   nutrition:{goals:{calories:2500,protein:170,carbs:300,fat:80},days:{}},
-  xp:0, xpLog:[], streak:0, lastWorkoutDate:null
+  xp:0, xpLog:[], streak:0, lastWorkoutDate:null,
+  bodyLog:[], schedule:{}, achievements:{}, shieldWeek:null, water:{}
 };
 
 const $ = id => document.getElementById(id);
@@ -273,8 +274,13 @@ function renderHome(){
   $('h-bar').style.width = Math.min(li.pct,100)+'%';
 
   const t=$('h-today'); t.innerHTML='';
-  const w=APP.workouts[0];
-  if(w) t.appendChild(wktCard(w));
+  const dow=new Date().getDay(); // 0=Sun … 6=Sat
+  const schedId=APP.schedule&&APP.schedule[dow];
+  const all=[...APP.workouts,...(APP.customWorkouts||[])];
+  let w=schedId?all.find(x=>x.id===schedId):null;
+  if(!w)w=APP.workouts[0];
+  if(schedId==='rest'){ t.innerHTML='<div class="card"><div class="card-t">😴 Rest Day</div><div class="card-s">Recovery is part of the plan. See you tomorrow!</div></div>'; }
+  else if(w) t.appendChild(wktCard(w));
   else t.innerHTML='<div class="empty"><div class="e">📋</div><div class="t">No workouts yet</div></div>';
 
   const q=$('h-quick'); q.innerHTML='';
@@ -467,7 +473,11 @@ function renderActive(){
     ex.sets.forEach((st,si)=>{
       const row=document.createElement('div'); row.className='srow '+(cardio?'crd':'str');
       if(st.done)row.style.opacity='.5';
-      const n=document.createElement('div'); n.className='snum'; n.textContent=si+1;
+      const n=document.createElement('div'); n.className='snum';
+      n.style.cursor='pointer';
+      const updN=()=>{ n.textContent=st.warm?'W':(si+1); n.style.color=st.warm?'var(--warning)':'var(--dim)'; };
+      updN();
+      if(!cardio) n.onclick=()=>{ st.warm=!st.warm; updN(); saveAW(); toast(st.warm?'Marked as warmup — won\'t count for volume/XP':'Working set','ok'); };
       row.appendChild(n);
       if(cardio){
         const di=mkIn(st.dur,'30:00','text',v=>{st.dur=v;saveAW();});
@@ -518,6 +528,8 @@ function parseMins(d){
   if(String(d).includes(':')){ const p=String(d).split(':'); return (parseInt(p[0])||0)+(parseInt(p[1])||0)/60; }
   return parseFloat(d)||0;
 }
+function weekKey(){ const d=new Date(); const jan=new Date(d.getFullYear(),0,1); return d.getFullYear()+'-W'+Math.ceil(((d-jan)/864e5+jan.getDay()+1)/7); }
+let lastRec=null;
 function finishWorkout(){
   if(!AW)return;
   clearInterval(awTimer); stopRest();
@@ -526,20 +538,26 @@ function finishWorkout(){
   AW.ex.forEach(ex=>{
     ex.sets.filter(s=>s.done).forEach(s=>{
       if(ex.type==='cardio'){ km+=parseFloat(s.dist)||0; mins+=parseMins(s.dur); }
-      else{ vol+=(parseFloat(s.w)||0)*(parseFloat(s.r)||0); sets++; }
+      else if(!s.warm){ vol+=(parseFloat(s.w)||0)*(parseFloat(s.r)||0); sets++; }
     });
   });
   const xp=Math.round(sets*10+vol*.05+mins*5+km*10);
   const rec={id:Date.now(),name:AW.name,e:AW.e,date:today(),duration:dur,volume:Math.round(vol),
-    cardioKm:Math.round(km*10)/10, cardioMin:Math.round(mins*10)/10,
+    cardioKm:Math.round(km*10)/10, cardioMin:Math.round(mins*10)/10, note:'',
     exercises:AW.ex.map(ex=>({id:ex.id,name:ex.name,type:ex.type,
-      sets:ex.sets.filter(s=>s.done).map(s=>ex.type==='cardio'?{dur:s.dur,dist:parseFloat(s.dist)||0}:{w:parseFloat(s.w)||0,r:parseFloat(s.r)||0})})),
+      sets:ex.sets.filter(s=>s.done).map(s=>ex.type==='cardio'?{dur:s.dur,dist:parseFloat(s.dist)||0}:{w:parseFloat(s.w)||0,r:parseFloat(s.r)||0,warm:!!s.warm})})),
     xpGained:xp};
   APP.history.push(rec);
+  lastRec=rec;
   updatePRsFrom(rec);
+  // Streak with weekly shield: a 2-day gap is forgiven once per week
   const t=today();
   if(APP.lastWorkoutDate!==t){
-    if(APP.lastWorkoutDate&&daysDiff(APP.lastWorkoutDate,t)===1)APP.streak++;
+    const gap=APP.lastWorkoutDate?daysDiff(APP.lastWorkoutDate,t):0;
+    if(APP.lastWorkoutDate&&gap===1)APP.streak++;
+    else if(APP.lastWorkoutDate&&gap===2&&APP.shieldWeek!==weekKey()){
+      APP.streak++; APP.shieldWeek=weekKey(); toast('🛡️ Streak shield used!','ok');
+    }
     else APP.streak=1;
     APP.lastWorkoutDate=t;
   }
@@ -548,6 +566,7 @@ function finishWorkout(){
   APP.xpLog.push({date:t,amount:xp,reason:rec.name,e:rec.e||'🏋️',total:APP.xp});
   if(APP.xpLog.length>300)APP.xpLog=APP.xpLog.slice(-300);
   save();
+  checkAchievements();
   showDone(rec,dur);
   clearAW(); AW=null; awStart=null;
 }
@@ -559,7 +578,7 @@ function updatePRsFrom(rec){
         if(!APP.prs[ex.id])APP.prs[ex.id]={name:ex.name,type:'cardio',bestKm:0,bestMins:0,date:rec.date};
         if(k>APP.prs[ex.id].bestKm){APP.prs[ex.id].bestKm=k;APP.prs[ex.id].date=rec.date;}
         if(m>APP.prs[ex.id].bestMins)APP.prs[ex.id].bestMins=m;
-      }else if(s.w>0&&s.r>0){
+      }else if(s.w>0&&s.r>0&&!s.warm){
         const e1=s.w*(1+s.r/30);
         if(!APP.prs[ex.id]||e1>APP.prs[ex.id].e1rm)
           APP.prs[ex.id]={name:ex.name,type:'strength',weight:s.w,reps:s.r,e1rm:e1,date:rec.date};
@@ -577,7 +596,12 @@ function showDone(rec,dur){
   stats.forEach(([v,l])=>{ g.innerHTML+=`<div class="dc"><div class="dv">${v}</div><div class="dl">${l}</div></div>`; });
   $('done').classList.add('on');
 }
-function closeDone(){ $('done').classList.remove('on'); go('home'); }
+function closeDone(){
+  const nt=($('done-note').value||'').trim().slice(0,120);
+  if(nt&&lastRec){ lastRec.note=esc(nt); save(); }
+  $('done-note').value='';
+  $('done').classList.remove('on'); go('home');
+}
 
 /* ============ REST TIMER ============ */
 let restI=null, restLeft=0;
@@ -613,6 +637,7 @@ function renderProgress(){
     wk.push('W'+(4-i));
   }
   drawBars('c-freq',wd,wk);
+  renderWeek(); renderBW(); renderAch();
   renderPRs(); renderHist(1); renderXPLog(1);
 }
 function last7(){ const a=[]; for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);a.push(ds(d));} return a; }
@@ -636,17 +661,19 @@ function drawBars(id,data,labels){
 }
 function renderPRs(){
   const el=$('p-prs'); el.innerHTML='';
-  const all=Object.values(APP.prs);
-  if(!all.length){ el.innerHTML='<div class="empty" style="padding:18px"><div class="t" style="font-size:15px">No PRs yet</div></div>'; return; }
-  const str=all.filter(p=>p.type!=='cardio').sort((a,b)=>b.e1rm-a.e1rm).slice(0,6);
-  const crd=all.filter(p=>p.type==='cardio');
-  [...str,...crd].forEach((p,i)=>{
+  const entries=Object.entries(APP.prs);
+  if(!entries.length){ el.innerHTML='<div class="empty" style="padding:18px"><div class="t" style="font-size:15px">No PRs yet</div></div>'; return; }
+  const str=entries.filter(([,p])=>p.type!=='cardio').sort((a,b)=>b[1].e1rm-a[1].e1rm).slice(0,6);
+  const crd=entries.filter(([,p])=>p.type==='cardio');
+  [...str,...crd].forEach(([id,p],i)=>{
     const r=document.createElement('div'); r.className='pritem';
+    r.style.cursor='pointer';
     if(p.type==='cardio'){
       r.innerHTML=`<div style="font-size:15px">🏃</div><div class="pn">${esc(p.name)}</div><div class="pv">${p.bestKm?p.bestKm+'<span class="pu">km</span>':''}${p.bestMins?' <span class="pu">'+Math.round(p.bestMins)+'min</span>':''}</div>`;
     }else{
       r.innerHTML=`<div style="font-family:var(--fm);font-size:10px;color:var(--dim);width:20px">#${i+1}</div><div class="pn">${esc(p.name)}</div><div class="pv">${p.weight}<span class="pu">kg × ${p.reps}</span></div>`;
     }
+    r.onclick=()=>openExChart(id,p.name,p.type);
     el.appendChild(r);
   });
 }
@@ -663,9 +690,10 @@ function renderHist(page){
     if(h.volume>0)parts.push(h.volume+'kg vol');
     if(h.cardioKm>0)parts.push(h.cardioKm+'km');
     if(h.cardioMin>0&&!h.cardioKm)parts.push(Math.round(h.cardioMin)+'min cardio');
+    const noteHtml=h.note?`<div style="font-size:12px;color:var(--muted);font-style:italic;margin-top:5px">📝 ${h.note}</div>`:'';
     c.innerHTML=`<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
       <div style="flex:1"><div class="card-t">${h.e||'🏋️'} ${esc(h.name)}</div>
-      <div class="card-s">${parts.join(' · ')}</div>
+      <div class="card-s">${parts.join(' · ')}</div>${noteHtml}
       <span class="badge" style="margin-top:7px;display:inline-block">+${h.xpGained||0} XP</span></div>
       <button class="btn-sm dng">🗑️</button></div>`;
     c.querySelector('button').onclick=()=>delHist(h.id);
@@ -768,6 +796,7 @@ function renderNutrition(){
     d.querySelector('button').onclick=()=>{ (APP.nutrition.days[nDate]||[]).splice(i,1); save(); renderNutrition(); };
     ml.appendChild(d);
   });
+  renderWater();
 }
 const porSel={};
 function openMeal(){
@@ -946,6 +975,208 @@ function resetAll(){
   }
 }
 
+/* ============ WEEKLY SUMMARY ============ */
+function renderWeek(){
+  const el=$('p-week'); if(!el)return;
+  const wk=last7();
+  const hs=APP.history.filter(h=>wk.includes(h.date));
+  const vol=hs.reduce((a,h)=>a+h.volume,0);
+  const xp=hs.reduce((a,h)=>a+(h.xpGained||0),0);
+  const km=hs.reduce((a,h)=>a+(h.cardioKm||0),0);
+  let calDays=0, calSum=0;
+  wk.forEach(d=>{ const m=APP.nutrition.days[d]; if(m&&m.length){calDays++; calSum+=m.reduce((a,x)=>a+(x.calories||0),0);} });
+  const avgCal=calDays?Math.round(calSum/calDays):0;
+  el.innerHTML=`<div class="card" style="margin-top:6px">
+    <div class="card-t">📅 Last 7 Days</div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px">
+      <div><div style="font-family:var(--fd);font-size:20px;font-weight:800;color:var(--accent)">${hs.length}</div><div style="font-family:var(--fm);font-size:9px;color:var(--muted);text-transform:uppercase">Workouts</div></div>
+      <div><div style="font-family:var(--fd);font-size:20px;font-weight:800;color:var(--accent)">${vol.toLocaleString()}</div><div style="font-family:var(--fm);font-size:9px;color:var(--muted);text-transform:uppercase">Volume kg</div></div>
+      <div><div style="font-family:var(--fd);font-size:20px;font-weight:800;color:var(--accent)">+${xp}</div><div style="font-family:var(--fm);font-size:9px;color:var(--muted);text-transform:uppercase">XP</div></div>
+      ${km>0?`<div><div style="font-family:var(--fd);font-size:20px;font-weight:800;color:var(--accent)">${Math.round(km*10)/10}</div><div style="font-family:var(--fm);font-size:9px;color:var(--muted);text-transform:uppercase">km</div></div>`:''}
+      ${avgCal>0?`<div><div style="font-family:var(--fd);font-size:20px;font-weight:800;color:var(--accent)">${avgCal}</div><div style="font-family:var(--fm);font-size:9px;color:var(--muted);text-transform:uppercase">Avg kcal</div></div>`:''}
+    </div></div>`;
+}
+
+/* ============ ACHIEVEMENTS ============ */
+const ACH=[
+  {id:'first',e:'🎉',n:'First Workout',c:()=>APP.history.length>=1},
+  {id:'w10',e:'🔟',n:'10 Workouts',c:()=>APP.history.length>=10},
+  {id:'w50',e:'💪',n:'50 Workouts',c:()=>APP.history.length>=50},
+  {id:'w100',e:'🏆',n:'100 Workouts',c:()=>APP.history.length>=100},
+  {id:'s7',e:'🔥',n:'7-Day Streak',c:()=>APP.streak>=7},
+  {id:'s30',e:'⚡',n:'30-Day Streak',c:()=>APP.streak>=30},
+  {id:'sq100',e:'🏋️',n:'100kg Squat',c:()=>APP.prs.squat&&APP.prs.squat.weight>=100},
+  {id:'bp100',e:'💯',n:'100kg Bench',c:()=>APP.prs.bench_press&&APP.prs.bench_press.weight>=100},
+  {id:'dl150',e:'💀',n:'150kg Deadlift',c:()=>APP.prs.deadlift&&APP.prs.deadlift.weight>=150},
+  {id:'run5',e:'🏃',n:'5km Run',c:()=>Object.values(APP.prs).some(p=>p.type==='cardio'&&p.bestKm>=5)},
+  {id:'xp10k',e:'⭐',n:'10,000 XP',c:()=>APP.xp>=10000},
+  {id:'lvl10',e:'🌱',n:'Level 10',c:()=>getLevel(APP.xp)+1>=10},
+  {id:'lvl25',e:'🦁',n:'Level 25',c:()=>getLevel(APP.xp)+1>=25},
+  {id:'lvl50',e:'👑',n:'Level 50',c:()=>getLevel(APP.xp)+1>=50},
+];
+function checkAchievements(){
+  APP.achievements=APP.achievements||{};
+  let earned=false;
+  ACH.forEach(a=>{
+    if(!APP.achievements[a.id]&&a.c()){
+      APP.achievements[a.id]=today(); earned=true;
+      toast('🏅 Achievement: '+a.n,'ok');
+    }
+  });
+  if(earned)save();
+}
+function renderAch(){
+  const el=$('p-ach'); if(!el)return;
+  el.innerHTML='';
+  ACH.forEach(a=>{
+    const got=!!APP.achievements[a.id];
+    const d=document.createElement('div');
+    d.style.cssText=`background:var(--surface);border:1px solid ${got?'var(--accent)':'var(--border)'};border-radius:12px;padding:11px 6px;text-align:center;${got?'':'opacity:.35'}`;
+    d.innerHTML=`<div style="font-size:24px">${a.e}</div><div style="font-family:var(--fm);font-size:8px;letter-spacing:.5px;color:${got?'var(--accent)':'var(--dim)'};text-transform:uppercase;margin-top:4px">${a.n}</div>`;
+    el.appendChild(d);
+  });
+}
+
+/* ============ BODY WEIGHT ============ */
+function openBW(){ $('bw-in').value=APP.profile.weight||''; openMo('m-bw'); }
+function logBW(){
+  const w=num($('bw-in').value,30,300);
+  if(!w){toast('Enter a valid weight','err');return;}
+  APP.bodyLog=APP.bodyLog||[];
+  const t=today();
+  const i=APP.bodyLog.findIndex(b=>b.date===t);
+  if(i!==-1)APP.bodyLog[i].w=w; else APP.bodyLog.push({date:t,w});
+  if(APP.bodyLog.length>120)APP.bodyLog=APP.bodyLog.slice(-120);
+  APP.profile.weight=w;
+  calcGoals(); save(); closeMo('m-bw');
+  renderProgress(); toast('Weight logged — goals updated!','ok');
+}
+function renderBW(){
+  const c=$('c-bw'); if(!c)return;
+  const log=[...(APP.bodyLog||[])].sort((a,b)=>a.date<b.date?-1:1).slice(-14);
+  if(!log.length){
+    const dpr=window.devicePixelRatio||1;
+    const w=c.parentElement.clientWidth-28;
+    c.width=w*dpr;c.height=150*dpr;c.style.width=w+'px';c.style.height='150px';
+    const x=c.getContext('2d'); x.scale(dpr,dpr);
+    x.fillStyle='rgba(112,112,160,.6)'; x.font='12px Barlow'; x.textAlign='center';
+    x.fillText('Tap + Log to record your first weight',w/2,80);
+    return;
+  }
+  drawBars('c-bw',log.map(b=>b.w),log.map(b=>b.date.slice(5)));
+}
+
+/* ============ WATER ============ */
+function waterGoal(){ return Math.round((APP.profile.weight||70)*35); }
+function renderWater(){
+  const el=$('n-water'); if(!el)return;
+  const isT=nDate===today();
+  const ml=(APP.water&&APP.water[nDate])||0;
+  const goal=waterGoal();
+  const pct=Math.min(ml/goal*100,100);
+  el.innerHTML=`<div class="card" style="margin-bottom:0;margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="card-t">💧 Water</div>
+      <div style="font-family:var(--fm);font-size:12px;color:var(--muted)">${(ml/1000).toFixed(1)}L / ${(goal/1000).toFixed(1)}L</div>
+    </div>
+    <div style="background:var(--surface3);border-radius:5px;height:8px;margin:10px 0;overflow:hidden"><div style="height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></div></div>
+    ${isT?`<div style="display:flex;gap:8px">
+      <button class="btn-sm" style="flex:1" onclick="addWater(250)">+250ml</button>
+      <button class="btn-sm" style="flex:1" onclick="addWater(500)">+500ml</button>
+      <button class="btn-sm dng" onclick="addWater(-250)">−</button>
+    </div>`:''}
+  </div>`;
+}
+function addWater(ml){
+  APP.water=APP.water||{};
+  const t=today();
+  APP.water[t]=Math.max(0,(APP.water[t]||0)+ml);
+  const k=Object.keys(APP.water).sort(); while(k.length>30)delete APP.water[k.shift()];
+  save(); renderWater();
+}
+
+/* ============ PER-EXERCISE CHART ============ */
+function openExChart(exId,name,type){
+  $('exc-t').textContent=name;
+  openMo('m-exchart');
+  setTimeout(()=>{
+    const pts=[];
+    APP.history.forEach(h=>{
+      const ex=(h.exercises||[]).find(e=>e.id===exId);
+      if(!ex||!ex.sets||!ex.sets.length)return;
+      if(type==='cardio'){
+        const best=Math.max(...ex.sets.map(s=>s.dist||0),0);
+        if(best>0)pts.push({d:h.date,v:best});
+      }else{
+        const best=Math.max(...ex.sets.filter(s=>!s.warm).map(s=>s.w||0),0);
+        if(best>0)pts.push({d:h.date,v:best});
+      }
+    });
+    pts.sort((a,b)=>a.d<b.d?-1:1);
+    const lastP=pts.slice(-12);
+    if(!lastP.length){
+      $('exc-info').textContent='No logged data for this exercise yet';
+      return;
+    }
+    drawBars('c-ex',lastP.map(p=>p.v),lastP.map(p=>p.d.slice(5)));
+    const diff=Math.round((lastP[lastP.length-1].v-lastP[0].v)*10)/10;
+    const unit=type==='cardio'?'km':'kg';
+    $('exc-info').textContent=`Best: ${Math.max(...lastP.map(p=>p.v))}${unit} · Change: ${diff>=0?'+':''}${diff}${unit}`;
+  },120);
+}
+
+/* ============ SCHEDULE ============ */
+const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function openSched(){
+  const l=$('sched-list'); l.innerHTML='';
+  const all=[...APP.workouts,...(APP.customWorkouts||[])];
+  [1,2,3,4,5,6,0].forEach(d=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);gap:10px';
+    row.innerHTML=`<div style="font-size:14px;font-weight:600">${DOW[d]}</div>`;
+    const sel=document.createElement('select');
+    sel.id='sd-'+d;
+    sel.style.cssText='background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:var(--fm);font-size:11px;outline:none;max-width:180px';
+    sel.innerHTML='<option value="">— None —</option><option value="rest">😴 Rest Day</option>'+
+      all.map(w=>`<option value="${w.id}">${w.e||''} ${esc(w.name)}</option>`).join('');
+    sel.value=(APP.schedule&&APP.schedule[d])||'';
+    row.appendChild(sel);
+    l.appendChild(row);
+  });
+  openMo('m-sched');
+}
+function saveSched(){
+  APP.schedule={};
+  [0,1,2,3,4,5,6].forEach(d=>{
+    const v=$('sd-'+d)?$('sd-'+d).value:'';
+    if(v)APP.schedule[d]=v;
+  });
+  save(); closeMo('m-sched'); renderHome(); toast('Schedule saved!','ok');
+}
+
+/* ============ IMPORT ============ */
+function doImport(ev){
+  const f=ev.target.files&&ev.target.files[0];
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!d||typeof d!=='object'||!d.profile){ toast('Invalid backup file','err'); return; }
+      if(!confirm('Import this backup? Current data will be replaced (your API key is kept).'))return;
+      const key=APP.settings.apiKey;
+      APP=d;
+      APP.settings=APP.settings||{};
+      APP.settings.apiKey=key;
+      save();
+      toast('Imported! Reloading…','ok');
+      setTimeout(()=>location.reload(),800);
+    }catch{ toast('Could not read file','err'); }
+  };
+  r.readAsText(f);
+  ev.target.value='';
+}
+
 /* ============ BOOT ============ */
 function initApp(){
   if(!APP.workouts||!APP.workouts.length) APP.workouts=TEMPLATES.map(t=>({...t}));
@@ -960,7 +1191,7 @@ function initApp(){
 function boot(){
   if('serviceWorker' in navigator){
     navigator.serviceWorker.getRegistrations().then(rs=>{
-      Promise.all(rs.map(r=>r.unregister())).then(()=>navigator.serviceWorker.register('./sw.js?v=200').catch(()=>{}));
+      Promise.all(rs.map(r=>r.unregister())).then(()=>navigator.serviceWorker.register('./sw.js?v=201').catch(()=>{}));
     }).catch(()=>{});
   }
   const saved=load();
@@ -974,6 +1205,10 @@ function boot(){
       if(!APP.xpLog)APP.xpLog=[];
       if(!APP.prs)APP.prs={};
       if(!APP.customWorkouts)APP.customWorkouts=[];
+      if(!APP.bodyLog)APP.bodyLog=[];
+      if(!APP.schedule)APP.schedule={};
+      if(!APP.achievements)APP.achievements={};
+      if(!APP.water)APP.water={};
       // Migrate old workout template shape (exercises→ex, defaultSets→sets, emoji→e, description→d)
       APP.workouts=(APP.workouts||[]).map(w=>({
         id:w.id, name:w.name, tags:w.tags||[],
