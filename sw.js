@@ -1,16 +1,14 @@
-const CACHE_NAME = 'fitstreak-v31';
+const CACHE_NAME = 'fitstreak-v200';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json',
-  'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&family=Barlow:wght@400;500;600&display=swap'
+  './app.js',
+  './manifest.json'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(STATIC_ASSETS).catch(() => {});
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS).catch(() => {}))
   );
   self.skipWaiting();
 });
@@ -25,26 +23,36 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Network first for API calls
-  if (event.request.url.includes('anthropic.com')) {
-    event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: 'offline' }), { headers: { 'Content-Type': 'application/json' } })));
-    return;
-  }
-  // Cache first for fonts
-  if (event.request.url.includes('fonts.googleapis.com') || event.request.url.includes('fonts.gstatic.com')) {
+  const url = event.request.url;
+
+  // Never touch API calls
+  if (url.includes('anthropic.com')) {
     event.respondWith(
-      caches.match(event.request).then(cached => cached || fetch(event.request).then(resp => {
-        const clone = resp.clone();
-        caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-        return resp;
-      }))
+      fetch(event.request).catch(() =>
+        new Response(JSON.stringify({ error: 'offline' }), { headers: { 'Content-Type': 'application/json' } })
+      )
     );
     return;
   }
-  // Network first for app shell (index.html, sw.js, manifest) — ensures updates are always picked up
+
+  // Cache-first for fonts
+  if (url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com')) {
+    event.respondWith(
+      caches.match(event.request).then(cached =>
+        cached || fetch(event.request).then(resp => {
+          const clone = resp.clone();
+          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          return resp;
+        })
+      )
+    );
+    return;
+  }
+
+  // Network-first for app shell — updates always picked up, offline falls back to cache
   event.respondWith(
     fetch(event.request).then(resp => {
-      if (resp.status === 200) {
+      if (resp.status === 200 && event.request.method === 'GET') {
         const clone = resp.clone();
         caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
       }
