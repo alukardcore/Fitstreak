@@ -1191,7 +1191,7 @@ function initApp(){
 function boot(){
   if('serviceWorker' in navigator){
     navigator.serviceWorker.getRegistrations().then(rs=>{
-      Promise.all(rs.map(r=>r.unregister())).then(()=>navigator.serviceWorker.register('./sw.js?v=201').catch(()=>{}));
+      Promise.all(rs.map(r=>r.unregister())).then(()=>navigator.serviceWorker.register('./sw.js?v=202').catch(()=>{}));
     }).catch(()=>{});
   }
   const saved=load();

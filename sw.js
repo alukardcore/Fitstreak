@@ -1,9 +1,11 @@
-const CACHE_NAME = 'fitstreak-v201';
+const CACHE_NAME = 'fitstreak-v202';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './app.js',
-  './manifest.json'
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
